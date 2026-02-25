@@ -124,7 +124,7 @@ export default function SignupPage() {
         <form className={styles.card} onSubmit={handleInviteSubmit}>
           <h1 className={styles.title}>Sign up</h1>
           <p className={styles.confirmText}>
-            Hermes is in early beta. Enter your invite code to create an account.
+            Diless is in early beta. Enter your invite code to create an account.
           </p>
           {error && <p className={styles.error}>{error}</p>}
           <label className={styles.label}>

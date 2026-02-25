@@ -11,7 +11,7 @@ export default async function handler(request) {
   const title = searchParams.get('title') || 'Untitled';
   const author = searchParams.get('author') || '';
 
-  // Five tab colors from Hermes
+  // Five tab colors from Diless
   const colors = ['#e07a5f', '#e0a05f', '#6b9e7a', '#5f8fc9', '#9a7ec8'];
 
   return new ImageResponse(
@@ -118,7 +118,7 @@ export default async function handler(request) {
                     height: 24,
                   },
                 },
-                'dearhermes.com',
+                'diless.vercel.app',
               ],
             },
           },

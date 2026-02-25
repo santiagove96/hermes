@@ -2,14 +2,33 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import posthog from 'posthog-js';
 import { fetchWritingProjects, fetchWritingProject, createWritingProject, updateWritingProject, deleteWritingProject } from '@hermes/api';
-import { relativeTime } from '@hermes/domain';
 import useAuth from '../../hooks/useAuth';
+import useLanguage from '../../hooks/useLanguage';
 import styles from './ProjectSwitcher.module.css';
 
 const INITIAL_VISIBLE = 3;
 
+function formatRelativeTimeLocalized(isoDate, language) {
+  const target = new Date(isoDate).getTime();
+  if (!Number.isFinite(target)) return '';
+
+  const diffSeconds = Math.round((target - Date.now()) / 1000);
+  const absSeconds = Math.abs(diffSeconds);
+  const locale = language === 'es' ? 'es' : 'en';
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+  if (absSeconds < 60) return rtf.format(diffSeconds, 'second');
+  if (absSeconds < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
+  if (absSeconds < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
+  if (absSeconds < 604800) return rtf.format(Math.round(diffSeconds / 86400), 'day');
+  if (absSeconds < 2629800) return rtf.format(Math.round(diffSeconds / 604800), 'week');
+  if (absSeconds < 31557600) return rtf.format(Math.round(diffSeconds / 2629800), 'month');
+  return rtf.format(Math.round(diffSeconds / 31557600), 'year');
+}
+
 export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpen, onDropdownClose, onProjectRenamed }) {
   const { session } = useAuth();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const wrapperRef = useRef(null);
   const renameInputRef = useRef(null);
@@ -88,7 +107,7 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
     if (creating || !session?.user?.id) return;
     setCreating(true);
     try {
-      const project = await createWritingProject('New Project', session.user.id);
+      const project = await createWritingProject(t('projectSwitcher.newProject'), session.user.id);
       posthog.capture('project_created');
       closeDropdown();
       navigate(`/projects/${project.id}`);
@@ -172,19 +191,19 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
     if (confirmingDelete === p.id) {
       return (
         <div key={p.id} className={styles.confirmRow}>
-          <div className={styles.confirmLabel}>Delete this project?</div>
+          <div className={styles.confirmLabel}>{t('projectSwitcher.deleteProjectQuestion')}</div>
           <div className={styles.confirmActions}>
             <button
               className={styles.confirmCancel}
               onClick={(e) => { e.stopPropagation(); setConfirmingDelete(null); }}
             >
-              Cancel
+              {t('projectSwitcher.cancel')}
             </button>
             <button
               className={styles.confirmDelete}
               onClick={(e) => { e.stopPropagation(); commitDelete(p.id); }}
             >
-              Delete
+              {t('projectSwitcher.delete')}
             </button>
           </div>
         </div>
@@ -214,8 +233,8 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
             />
           ) : (
             <>
-              <div className={styles.projectItemTitle}>{p.title || 'New Project'}</div>
-              <div className={styles.projectItemTime}>Updated {relativeTime(p.updatedAt)}</div>
+              <div className={styles.projectItemTitle}>{p.title || t('projectSwitcher.newProject')}</div>
+              <div className={styles.projectItemTime}>{t('projectSwitcher.updatedAgo', { time: formatRelativeTimeLocalized(p.updatedAt, language) })}</div>
             </>
           )}
         </div>
@@ -224,7 +243,7 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
           <button
             className={styles.actionIconBtn}
             onClick={(e) => startRename(e, p)}
-            title="Rename"
+            title={t('projectSwitcher.rename')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -234,7 +253,7 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
           <button
             className={`${styles.actionIconBtn} ${styles.actionIconDanger}`}
             onClick={(e) => startDelete(e, p.id)}
-            title="Delete"
+            title={t('projectSwitcher.delete')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18" />
@@ -251,13 +270,13 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
     <div ref={wrapperRef} style={{ position: 'relative' }}>
       <div className={styles.trigger}>
         <button className={styles.triggerBtn} onClick={toggleDropdown}>
-          <span className={styles.labelDefault}>Hermes</span>
-          <span className={styles.labelHover}>Projects</span>
+          <span className={styles.labelDefault}>Diless</span>
+          <span className={styles.labelHover}>{t('projectSwitcher.projects')}</span>
         </button>
         <span className={styles.sep}>/</span>
         <span className={styles.titleWrap}>
           <span className={styles.projectTitle}>
-            {projectTitle || 'New Project'}
+            {projectTitle || t('projectSwitcher.newProject')}
           </span>
         </span>
       </div>
@@ -265,21 +284,21 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
       {open && (
         <div className={styles.menu}>
           <div className={styles.menuHeader}>
-            <span className={styles.menuHeaderLabel}>Projects</span>
+            <span className={styles.menuHeaderLabel}>{t('projectSwitcher.projects')}</span>
             <button
               className={styles.createBtn}
               onClick={handleCreate}
               disabled={creating}
-              title="New project"
+              title={t('projectSwitcher.createNewProject')}
             >
               +
             </button>
           </div>
 
           {projects === null ? (
-            <div className={styles.menuLoading}>Loading...</div>
+            <div className={styles.menuLoading}>{t('projectSwitcher.loading')}</div>
           ) : sortedProjects.length === 0 ? (
-            <div className={styles.menuEmpty}>No projects</div>
+            <div className={styles.menuEmpty}>{t('projectSwitcher.noProjects')}</div>
           ) : (
             <div className={`${styles.projectList} ${expanded ? styles.projectListScrollable : ''}`}>
               {visibleProjects.map(renderProjectItem)}
@@ -288,7 +307,7 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
 
           {hasMore && !expanded && (
             <button className={styles.viewMore} onClick={() => setExpanded(true)}>
-              View More Projects
+              {t('projectSwitcher.viewMoreProjects')}
             </button>
           )}
         </div>

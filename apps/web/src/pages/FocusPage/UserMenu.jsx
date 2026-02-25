@@ -4,12 +4,123 @@ import posthog from 'posthog-js';
 import { createPortalSession } from '@hermes/api';
 import { supabase } from '../../lib/supabase';
 import useAuth from '../../hooks/useAuth';
+import useLanguage from '../../hooks/useLanguage';
 import useUsage from '../../hooks/useUsage';
 import McpSettingsView from './McpSettingsView';
 import styles from './UserMenu.module.css';
 
+const USER_MENU_TEXT = {
+  es: {
+    account: 'Cuenta',
+    changePassword: 'Cambiar contraseña',
+    newPassword: 'Nueva contraseña',
+    confirmNewPassword: 'Confirmar nueva contraseña',
+    passwordUpdated: 'Contraseña actualizada',
+    cancel: 'Cancelar',
+    updating: 'Actualizando...',
+    update: 'Actualizar',
+    billing: 'Facturación',
+    patron: 'Patron',
+    trial: 'Prueba',
+    free: 'Gratis',
+    planSuffix: 'plan',
+    daysRemaining: (days) => `(${days} días restantes)`,
+    cancelsOn: (date) => `(cancela ${date})`,
+    messagesUsed: (used, limit) => `${used} / ${limit} mensajes usados`,
+    patronThanks: 'Gracias por apoyar Diless. Tu patronazgo financia a quienes construyen esta herramienta.',
+    manageSubscription: 'Gestionar suscripción',
+    trialAfter: 'Después de tu prueba tendrás 10 mensajes/día en el plan Gratis.',
+    becomePatron: 'Hazte Patron — $15/mes',
+    featureMessages: '300 mensajes/mes',
+    featureBeta: 'Acceso anticipado a funciones beta',
+    featureSupport: 'Apoyas el desarrollo independiente',
+    back: 'Volver',
+    mcpServers: 'Servidores MCP',
+    signOut: 'Cerrar sesión',
+    signIn: 'Iniciar sesión',
+    signUp: 'Registrarse',
+    email: 'Email',
+    password: 'Contraseña',
+    forgotPasswordQ: '¿Olvidaste tu contraseña?',
+    signingIn: 'Ingresando...',
+    logIn: 'Entrar',
+    noAccount: '¿No tienes cuenta?',
+    alreadyHaveAccount: '¿Ya tienes cuenta?',
+    creatingAccount: 'Creando cuenta...',
+    checkYourEmail: 'Revisa tu email',
+    signupDoneText: (email) => `Enviamos un link de confirmación a ${email}. Haz click para activar tu cuenta.`,
+    goToLogin: 'Ir al login',
+    resetPassword: 'Restablecer contraseña',
+    sending: 'Enviando...',
+    sendResetLink: 'Enviar link de recuperación',
+    rememberPassword: '¿Recordaste tu contraseña?',
+    forgotDoneText: (email) => `Enviamos un link para restablecer tu contraseña a ${email}. Haz click para definir una nueva.`,
+    backToSignIn: 'Volver a iniciar sesión',
+    passwordMin: 'La contraseña debe tener al menos 6 caracteres',
+    passwordsNoMatch: 'Las contraseñas no coinciden',
+    failedUpdatePassword: 'No se pudo actualizar la contraseña',
+    failedSignIn: 'No se pudo iniciar sesión',
+    failedCreateAccount: 'No se pudo crear la cuenta',
+    failedSendResetLink: 'No se pudo enviar el link de recuperación',
+  },
+  en: {
+    account: 'Account',
+    changePassword: 'Change Password',
+    newPassword: 'New password',
+    confirmNewPassword: 'Confirm new password',
+    passwordUpdated: 'Password updated',
+    cancel: 'Cancel',
+    updating: 'Updating...',
+    update: 'Update',
+    billing: 'Billing',
+    patron: 'Patron',
+    trial: 'Trial',
+    free: 'Free',
+    planSuffix: 'plan',
+    daysRemaining: (days) => `(${days} days remaining)`,
+    cancelsOn: (date) => `(cancels ${date})`,
+    messagesUsed: (used, limit) => `${used} / ${limit} messages used`,
+    patronThanks: 'Thank you for supporting Diless. Your patronage funds the contributors who build this tool.',
+    manageSubscription: 'Manage subscription',
+    trialAfter: "After your trial, you'll have 10 messages/day on the Free plan.",
+    becomePatron: 'Become a Patron — $15/mo',
+    featureMessages: '300 messages/month',
+    featureBeta: 'Early access to beta features',
+    featureSupport: 'Support independent development',
+    back: 'Back',
+    mcpServers: 'MCP Servers',
+    signOut: 'Sign Out',
+    signIn: 'Sign In',
+    signUp: 'Sign Up',
+    email: 'Email',
+    password: 'Password',
+    forgotPasswordQ: 'Forgot password?',
+    signingIn: 'Signing in...',
+    logIn: 'Log in',
+    noAccount: 'No account?',
+    alreadyHaveAccount: 'Already have an account?',
+    creatingAccount: 'Creating account...',
+    checkYourEmail: 'Check your email',
+    signupDoneText: (email) => `A confirmation link was sent to ${email}. Click it to activate your account.`,
+    goToLogin: 'Go to login',
+    resetPassword: 'Reset password',
+    sending: 'Sending...',
+    sendResetLink: 'Send reset link',
+    rememberPassword: 'Remember your password?',
+    forgotDoneText: (email) => `A password reset link was sent to ${email}. Click it to set a new password.`,
+    backToSignIn: 'Back to sign in',
+    passwordMin: 'Password must be at least 6 characters',
+    passwordsNoMatch: 'Passwords do not match',
+    failedUpdatePassword: 'Failed to update password',
+    failedSignIn: 'Failed to sign in',
+    failedCreateAccount: 'Failed to create account',
+    failedSendResetLink: 'Failed to send reset link',
+  },
+};
+
 export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
   const { session, signIn, signInWithGoogle, signOut, updatePassword } = useAuth();
+  const { language } = useLanguage();
   const { usage } = useUsage(session);
   const wrapperRef = useRef(null);
   const passwordInputRef = useRef(null);
@@ -32,6 +143,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
 
   const isLoggedIn = !!session;
   const email = session?.user?.email;
+  const ui = language === 'es' ? USER_MENU_TEXT.es : USER_MENU_TEXT.en;
 
   const openDropdown = useCallback(() => {
     setOpen(true);
@@ -107,11 +219,11 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
     setError('');
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(ui.passwordMin);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(ui.passwordsNoMatch);
       return;
     }
 
@@ -120,7 +232,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
       await updatePassword(newPassword);
       setSuccess(true);
     } catch (err) {
-      setError(err.message || 'Failed to update password');
+      setError(err.message || ui.failedUpdatePassword);
     } finally {
       setSubmitting(false);
     }
@@ -138,7 +250,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
         closeDropdown();
       }
     } catch (err) {
-      setError(err.message || 'Failed to sign in');
+      setError(err.message || ui.failedSignIn);
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +268,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
         setView('signupDone');
       }
     } catch (err) {
-      setError(err.message || 'Failed to create account');
+      setError(err.message || ui.failedCreateAccount);
     } finally {
       setSubmitting(false);
     }
@@ -174,7 +286,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
         setView('forgotPasswordDone');
       }
     } catch (err) {
-      setError(err.message || 'Failed to send reset link');
+      setError(err.message || ui.failedSendResetLink);
     } finally {
       setSubmitting(false);
     }
@@ -209,7 +321,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
       <button
         className={styles.avatarBtn}
         onClick={toggleDropdown}
-        title={email || 'Account'}
+        title={email || ui.account}
       >
         {isLoggedIn ? initial : personIcon}
       </button>
@@ -219,24 +331,24 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
           {isLoggedIn ? (
             view === 'password' ? (
               <form className={styles.passwordForm} onSubmit={handlePasswordSubmit}>
-                <div className={styles.passwordTitle}>Change Password</div>
+                  <div className={styles.passwordTitle}>{ui.changePassword}</div>
                 <input
                   ref={passwordInputRef}
                   className={styles.passwordInput}
                   type="password"
-                  placeholder="New password"
+                  placeholder={ui.newPassword}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
                 <input
                   className={styles.passwordInput}
                   type="password"
-                  placeholder="Confirm new password"
+                  placeholder={ui.confirmNewPassword}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
                 {error && <div className={styles.passwordError}>{error}</div>}
-                {success && <div className={styles.passwordSuccess}>Password updated</div>}
+                {success && <div className={styles.passwordSuccess}>{ui.passwordUpdated}</div>}
                 <div className={styles.passwordActions}>
                   <button
                     type="button"
@@ -248,14 +360,14 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                       setError('');
                     }}
                   >
-                    Cancel
+                    {ui.cancel}
                   </button>
                   <button
                     type="submit"
                     className={styles.updateBtn}
                     disabled={submitting}
                   >
-                    {submitting ? 'Updating...' : 'Update'}
+                    {submitting ? ui.updating : ui.update}
                   </button>
                 </div>
               </form>
@@ -263,63 +375,63 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
               <McpSettingsView session={session} onBack={() => setView('menu')} />
             ) : view === 'billing' ? (
               <div className={styles.billingView}>
-                <div className={styles.billingTitle}>Billing</div>
+                <div className={styles.billingTitle}>{ui.billing}</div>
                 <div className={styles.billingPlan}>
-                  {usage?.plan === 'pro' ? 'Patron' : usage?.isTrial ? 'Trial' : 'Free'} plan
+                  {usage?.plan === 'pro' ? ui.patron : usage?.isTrial ? ui.trial : ui.free} {ui.planSuffix}
                   {usage?.isTrial && usage?.trialExpiresAt && (
                     <span className={styles.billingCancelNote}>
-                      {' '}({Math.max(0, Math.ceil((new Date(usage.trialExpiresAt) - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining)
+                      {' '}{ui.daysRemaining(Math.max(0, Math.ceil((new Date(usage.trialExpiresAt) - Date.now()) / (1000 * 60 * 60 * 24))))}
                     </span>
                   )}
                   {usage?.cancelAtPeriodEnd && usage?.currentPeriodEnd && (
                     <span className={styles.billingCancelNote}>
-                      {' '}(cancels {new Date(usage.currentPeriodEnd).toLocaleDateString()})
+                      {' '}{ui.cancelsOn(new Date(usage.currentPeriodEnd).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US'))}
                     </span>
                   )}
                 </div>
                 {usage && (
                   <div className={styles.billingUsage}>
-                    {usage.used} / {usage.limit} messages used
+                    {ui.messagesUsed(usage.used, usage.limit)}
                   </div>
                 )}
                 {usage?.plan === 'pro' ? (
                   <>
                     <div className={styles.billingThankYou}>
-                      Thank you for supporting Hermes. Your patronage funds the contributors who build this tool.
+                      {ui.patronThanks}
                     </div>
                     <button
                       className={styles.billingActionBtn}
                       onClick={handleManageSubscription}
                     >
-                      Manage subscription
+                      {ui.manageSubscription}
                     </button>
                   </>
                 ) : usage?.isTrial ? (
                   <>
                     <div className={styles.billingThankYou}>
-                      After your trial, you'll have 10 messages/day on the Free plan.
+                      {ui.trialAfter}
                     </div>
                     <Link
                       className={styles.billingActionBtn}
                       to="/upgrade"
                       onClick={() => { posthog.capture('upgrade_clicked', { source: 'billing_menu' }); closeDropdown(); }}
                     >
-                      Become a Patron — $15/mo
+                      {ui.becomePatron}
                     </Link>
                   </>
                 ) : (
                   <>
                     <ul className={styles.billingFeatures}>
-                      <li>300 messages/month</li>
-                      <li>Early access to beta features</li>
-                      <li>Support independent development</li>
+                      <li>{ui.featureMessages}</li>
+                      <li>{ui.featureBeta}</li>
+                      <li>{ui.featureSupport}</li>
                     </ul>
                     <Link
                       className={styles.billingActionBtn}
                       to="/upgrade"
                       onClick={() => { posthog.capture('upgrade_clicked', { source: 'billing_menu' }); closeDropdown(); }}
                     >
-                      Become a Patron — $15/mo
+                      {ui.becomePatron}
                     </Link>
                   </>
                 )}
@@ -327,13 +439,13 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                   className={styles.billingBackBtn}
                   onClick={() => setView('menu')}
                 >
-                  Back
+                  {ui.back}
                 </button>
               </div>
             ) : (
               <>
                 <div className={styles.emailSection}>
-                  <div className={styles.emailLabel}>Account</div>
+                  <div className={styles.emailLabel}>{ui.account}</div>
                   <div className={styles.emailValue}>{email}</div>
                 </div>
                 <div className={styles.menuItems}>
@@ -341,39 +453,39 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                     className={styles.menuItem}
                     onClick={() => setView('password')}
                   >
-                    Change Password
+                    {ui.changePassword}
                   </button>
                   <button
                     className={styles.menuItem}
                     onClick={() => setView('billing')}
                   >
-                    Billing
+                    {ui.billing}
                   </button>
                   {usage?.hasMcpAccess && (
                     <button
                       className={styles.menuItem}
                       onClick={() => setView('mcp')}
                     >
-                      MCP Servers <span className={styles.betaBadge}>beta</span>
+                      {ui.mcpServers} <span className={styles.betaBadge}>beta</span>
                     </button>
                   )}
                   <button
                     className={`${styles.menuItem} ${styles.menuItemDanger}`}
                     onClick={handleSignOut}
                   >
-                    Sign Out
+                    {ui.signOut}
                   </button>
                 </div>
               </>
             )
           ) : view === 'login' ? (
             <form className={styles.loginForm} onSubmit={handleLoginSubmit}>
-              <div className={styles.loginTitle}>Sign In</div>
+              <div className={styles.loginTitle}>{ui.signIn}</div>
               <input
                 ref={loginEmailRef}
                 className={styles.loginInput}
                 type="email"
-                placeholder="Email"
+                placeholder={ui.email}
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 required
@@ -381,14 +493,14 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
               <input
                 className={styles.loginInput}
                 type="password"
-                placeholder="Password"
+                placeholder={ui.password}
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 required
               />
               <div className={styles.forgotLink}>
                 <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('forgotPassword'); }}>
-                  Forgot password?
+                  {ui.forgotPasswordQ}
                 </button>
               </div>
               {error && <div className={styles.loginError}>{error}</div>}
@@ -397,7 +509,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                 className={styles.loginSubmitBtn}
                 disabled={submitting}
               >
-                {submitting ? 'Signing in...' : 'Log in'}
+                {submitting ? ui.signingIn : ui.logIn}
               </button>
               <button
                 type="button"
@@ -413,20 +525,20 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                 Google
               </button>
               <div className={styles.switchLink}>
-                No account?{' '}
+                {ui.noAccount}{' '}
                 <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('signup'); }}>
-                  Sign up
+                  {ui.signUp}
                 </button>
               </div>
             </form>
           ) : view === 'signup' ? (
             <form className={styles.loginForm} onSubmit={handleSignupSubmit}>
-              <div className={styles.loginTitle}>Sign Up</div>
+              <div className={styles.loginTitle}>{ui.signUp}</div>
               <input
                 ref={signupEmailRef}
                 className={styles.loginInput}
                 type="email"
-                placeholder="Email"
+                placeholder={ui.email}
                 value={signupEmail}
                 onChange={(e) => setSignupEmail(e.target.value)}
                 required
@@ -434,7 +546,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
               <input
                 className={styles.loginInput}
                 type="password"
-                placeholder="Password"
+                placeholder={ui.password}
                 value={signupPassword}
                 onChange={(e) => setSignupPassword(e.target.value)}
                 minLength={6}
@@ -446,7 +558,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                 className={styles.loginSubmitBtn}
                 disabled={submitting}
               >
-                {submitting ? 'Creating account...' : 'Sign up'}
+                {submitting ? ui.creatingAccount : ui.signUp}
               </button>
               <button
                 type="button"
@@ -462,34 +574,38 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                 Google
               </button>
               <div className={styles.switchLink}>
-                Already have an account?{' '}
+                {ui.alreadyHaveAccount}{' '}
                 <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('login'); }}>
-                  Log in
+                  {ui.logIn}
                 </button>
               </div>
             </form>
           ) : view === 'signupDone' ? (
             <div className={styles.loginForm}>
-              <div className={styles.loginTitle}>Check your email</div>
+              <div className={styles.loginTitle}>{ui.checkYourEmail}</div>
               <div className={styles.signupDoneText}>
-                A confirmation link was sent to <strong>{signupEmail}</strong>. Click it to activate your account.
+                {language === 'es' ? (
+                  <>Enviamos un link de confirmación a <strong>{signupEmail}</strong>. Haz click para activar tu cuenta.</>
+                ) : (
+                  <>A confirmation link was sent to <strong>{signupEmail}</strong>. Click it to activate your account.</>
+                )}
               </div>
               <button
                 type="button"
                 className={styles.loginSubmitBtn}
                 onClick={() => { setError(''); setView('login'); }}
               >
-                Go to login
+                {ui.goToLogin}
               </button>
             </div>
           ) : view === 'forgotPassword' ? (
             <form className={styles.loginForm} onSubmit={handleForgotSubmit}>
-              <div className={styles.loginTitle}>Reset password</div>
+              <div className={styles.loginTitle}>{ui.resetPassword}</div>
               <input
                 ref={forgotEmailRef}
                 className={styles.loginInput}
                 type="email"
-                placeholder="Email"
+                placeholder={ui.email}
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 required
@@ -500,27 +616,31 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                 className={styles.loginSubmitBtn}
                 disabled={submitting}
               >
-                {submitting ? 'Sending...' : 'Send reset link'}
+                {submitting ? ui.sending : ui.sendResetLink}
               </button>
               <div className={styles.switchLink}>
-                Remember your password?{' '}
+                {ui.rememberPassword}{' '}
                 <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('login'); }}>
-                  Log in
+                  {ui.logIn}
                 </button>
               </div>
             </form>
           ) : view === 'forgotPasswordDone' ? (
             <div className={styles.loginForm}>
-              <div className={styles.loginTitle}>Check your email</div>
+              <div className={styles.loginTitle}>{ui.checkYourEmail}</div>
               <div className={styles.signupDoneText}>
-                A password reset link was sent to <strong>{forgotEmail}</strong>. Click it to set a new password.
+                {language === 'es' ? (
+                  <>Enviamos un link para restablecer tu contraseña a <strong>{forgotEmail}</strong>. Haz click para definir una nueva.</>
+                ) : (
+                  <>A password reset link was sent to <strong>{forgotEmail}</strong>. Click it to set a new password.</>
+                )}
               </div>
               <button
                 type="button"
                 className={styles.loginSubmitBtn}
                 onClick={() => { setError(''); setView('login'); }}
               >
-                Back to sign in
+                {ui.backToSignIn}
               </button>
             </div>
           ) : (
@@ -529,13 +649,13 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                 className={styles.menuItem}
                 onClick={() => { setError(''); setView('login'); }}
               >
-                Sign In
+                {ui.signIn}
               </button>
               <button
                 className={styles.menuItem}
                 onClick={() => { setError(''); setView('signup'); }}
               >
-                Sign Up
+                {ui.signUp}
               </button>
             </div>
           )}

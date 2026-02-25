@@ -27,7 +27,7 @@ export default function UpgradePage() {
         <div className={styles.card}>
           <h1 className={styles.title}>You're a Patron — thank you.</h1>
           <p className={styles.body}>
-            Your support funds the contributors who build Hermes.
+            Your support funds the contributors who build Diless.
           </p>
           <button className={styles.primaryBtn} onClick={handleManageSubscription}>
             Manage subscription
@@ -44,7 +44,7 @@ export default function UpgradePage() {
         <h1 className={styles.title}>Become a Patron</h1>
         <p className={styles.price}>$15/month</p>
         <p className={styles.body}>
-          Hermes is open-source and built on the belief that tools should
+          Diless is open-source and built on the belief that tools should
           deepen your thinking, not replace it. Your support funds the
           contributors who make this possible.
         </p>
@@ -64,7 +64,7 @@ export default function UpgradePage() {
           Become a Patron — $15/mo
         </a>
         <p className={styles.footnote}>
-          Hermes is fully open-source. You can run it yourself if you prefer.
+          Diless is fully open-source. You can run it yourself if you prefer.
         </p>
       </div>
     </main>

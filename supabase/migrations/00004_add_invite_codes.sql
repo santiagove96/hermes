@@ -36,4 +36,4 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Seed initial invite code
-INSERT INTO public.invite_codes (code, max_uses) VALUES ('HERMES-BETA-2026', 25);
+INSERT INTO public.invite_codes (code, max_uses) VALUES ('DILESS-BETA-2026', 25);

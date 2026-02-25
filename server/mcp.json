@@ -1,6 +1,7 @@
 {
   "mcpServers": {
     "arena": {
+      "disabled": true,
       "type": "http",
       "url": "https://arena-mcp-production.up.railway.app/mcp",
       "headers": {
