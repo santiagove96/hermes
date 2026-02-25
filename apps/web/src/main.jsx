@@ -7,6 +7,7 @@ import './index.css'
 import App from './App.jsx'
 import './lib/supabase'
 import AuthProvider from './contexts/AuthContext'
+import { LanguageProvider } from './contexts/LanguageContext'
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -53,9 +54,11 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
       <BrowserRouter>
-        <AuthProvider>
-            <App />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+              <App />
+          </AuthProvider>
+        </LanguageProvider>
       </BrowserRouter>
     </Sentry.ErrorBoundary>
   </StrictMode>,

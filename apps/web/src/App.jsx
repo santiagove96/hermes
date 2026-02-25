@@ -73,12 +73,12 @@ function RedirectToLatestProject() {
 
           // Create a starter project and land on it
           const starterProject = await createWritingProject(
-            'My First Project',
+            'Mi primer sermón',
             session.user.id,
             {
-              subtitle: 'A brief description of your piece',
+              subtitle: 'Tema, texto base y objetivo del mensaje',
               pages: {
-                coral: 'Start writing here.\n\nCheck the *Welcome to Hermes* project in the sidebar for a tour of the editor and assistant.',
+                coral: 'Empieza a preparar tu sermón aquí.\n\nEste texto es temporal y luego lo reemplazaremos por tu flujo final de sermones.',
               },
             },
           );

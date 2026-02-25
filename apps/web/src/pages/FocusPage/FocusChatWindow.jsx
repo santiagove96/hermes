@@ -206,10 +206,10 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
       if (err?.status === 429) {
         // Rate limited — show inline upgrade message
         const limitMsg = err.plan === 'pro'
-          ? `You've reached your monthly limit of ${err.limit} messages. Your limit resets soon — thank you for supporting Hermes.`
+          ? `You've reached your monthly limit of ${err.limit} messages. Your limit resets soon — thank you for supporting Diless.`
           : err.isTrial
             ? `You've used all ${err.limit} trial messages for this month.\n\nBecome a Patron ($15/mo) to get 300 messages per month. [Learn more](/upgrade)`
-            : `You've reached your daily limit of ${err.limit} messages.\n\nBecome a Patron ($15/mo) to get 300 messages per month and support Hermes development. [Learn more](/upgrade)`;
+            : `You've reached your daily limit of ${err.limit} messages.\n\nBecome a Patron ($15/mo) to get 300 messages per month and support Diless development. [Learn more](/upgrade)`;
 
         setMessages((prev) => {
           const updated = [...prev];
@@ -288,7 +288,7 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           {wingIcon(16)}
-          <span className={styles.headerLabel}>Hermes</span>
+          <span className={styles.headerLabel}>Diless</span>
         </div>
         <button
           className={styles.minimizeBtn}
@@ -303,7 +303,7 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
         {!isLoggedIn ? (
           <div className={styles.loginPrompt}>
             <p className={styles.loginText}>
-              <Link to="/signup" className={styles.loginLink}>Sign up</Link> to chat with Hermes.
+              <Link to="/signup" className={styles.loginLink}>Sign up</Link> to chat with Diless.
             </p>
           </div>
         ) : !loaded ? (
@@ -357,7 +357,7 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
             ref={inputRef}
             className={styles.inputField}
             type="text"
-            placeholder={isOffline ? 'Offline — connect to send messages' : streaming ? 'Hermes is thinking...' : 'Type a message...'}
+            placeholder={isOffline ? 'Offline — connect to send messages' : streaming ? 'Diless is thinking...' : 'Type a message...'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

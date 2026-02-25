@@ -10,14 +10,16 @@ import { Markdown } from '@tiptap/markdown';
 import { Slice } from '@tiptap/pm/model';
 import { fetchWritingProject, saveProjectPages, saveProjectHighlights, updateWritingProject, updatePublishSettings, generateSlug, fetchCurrentUsage } from '@hermes/api';
 import { IS_MOBILE } from '../../lib/platform';
+import { normalizeLegacyPagesForSingleCanvas } from '../../lib/singleCanvas';
 import useAuth from '../../hooks/useAuth';
+import useLanguage from '../../hooks/useLanguage';
 import useFocusMode from './useFocusMode';
 import useHighlights, { getDocFlatText, flatOffsetToPos } from './useHighlights';
 import useInlineLink from './useInlineLink';
 import LinkTooltip from './LinkTooltip';
 import FocusChatWindow from './FocusChatWindow';
 import HighlightPopover from './HighlightPopover';
-import PageTabs, { EMPTY_PAGES, TAB_KEYS } from './PageTabs';
+import { EMPTY_PAGES } from './PageTabs';
 import ProjectSwitcher from './ProjectSwitcher';
 import ShareButton from './ShareButton';
 import UserMenu from './UserMenu';
@@ -38,6 +40,8 @@ export default function FocusPage() {
   const { projectId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
+  const aiEnabled = import.meta.env.VITE_AI_ENABLED !== 'false';
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSubtitle, setProjectSubtitle] = useState('');
   const [publishState, setPublishState] = useState({
@@ -48,7 +52,6 @@ export default function FocusPage() {
     publishedTabs: [],
     publishedAt: null,
   });
-  const [settingsVisible, setSettingsVisible] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Track online/offline status
@@ -99,7 +102,6 @@ export default function FocusPage() {
 
   const {
     focusMode,
-    cycleFocusMode,
     focusExtension,
     syncFocusMode,
   } = useFocusMode();
@@ -123,7 +125,7 @@ export default function FocusPage() {
       StarterKit.configure({ link: false }),
       Markdown,
       Placeholder.configure({
-        placeholder: 'Start writing...',
+        placeholder: t('focusPage.startWriting'),
       }),
       Link.configure({
         openOnClick: false,
@@ -216,6 +218,14 @@ export default function FocusPage() {
 
     async function loadContent() {
       let loadedPages = null;
+      let shouldPersistMigratedPages = false;
+
+      const finalizeLoadedPages = (candidatePages) => {
+        if (!candidatePages) return null;
+        const normalized = normalizeLegacyPagesForSingleCanvas(candidatePages, EMPTY_PAGES);
+        if (normalized.migrated) shouldPersistMigratedPages = true;
+        return normalized.pages;
+      };
 
       // Try Supabase first if logged in
       if (isLoggedIn && projectId) {
@@ -240,9 +250,9 @@ export default function FocusPage() {
           // Use pages if they have content, else migrate from content field
           const hasPages = project?.pages && Object.values(project.pages).some((v) => v);
           if (hasPages) {
-            loadedPages = { ...EMPTY_PAGES, ...project.pages };
+            loadedPages = finalizeLoadedPages({ ...EMPTY_PAGES, ...project.pages });
           } else if (project?.content) {
-            loadedPages = { ...EMPTY_PAGES, coral: project.content };
+            loadedPages = finalizeLoadedPages({ ...EMPTY_PAGES, coral: project.content });
           }
 
           // Load highlights from project
@@ -251,6 +261,12 @@ export default function FocusPage() {
           }
 
           if (loadedPages) {
+            if (shouldPersistMigratedPages) {
+              try {
+                localStorage.setItem(storageKey, JSON.stringify(loadedPages));
+              } catch { /* localStorage unavailable */ }
+              saveProjectPages(projectId, loadedPages).catch(() => {});
+            }
             setPages(loadedPages);
             pagesRef.current = loadedPages;
             editor.commands.setContent(loadedPages[activeTab] || '', { contentType: 'markdown' });
@@ -271,7 +287,7 @@ export default function FocusPage() {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object') {
-            loadedPages = { ...EMPTY_PAGES, ...parsed };
+            loadedPages = finalizeLoadedPages({ ...EMPTY_PAGES, ...parsed });
           }
         }
       } catch {
@@ -279,7 +295,7 @@ export default function FocusPage() {
         try {
           const legacy = localStorage.getItem(`hermes-focus-${projectId}`);
           if (legacy) {
-            loadedPages = { ...EMPTY_PAGES, coral: legacy };
+            loadedPages = finalizeLoadedPages({ ...EMPTY_PAGES, coral: legacy });
           }
         } catch {
           // localStorage unavailable
@@ -289,16 +305,22 @@ export default function FocusPage() {
       // No localStorage found — seed with Welcome content for unauthenticated users
       if (!loadedPages && !isLoggedIn) {
         const { WELCOME_PAGES, WELCOME_HIGHLIGHTS } = await import('@hermes/api');
-        loadedPages = { ...EMPTY_PAGES, ...WELCOME_PAGES };
+        loadedPages = finalizeLoadedPages({ ...EMPTY_PAGES, ...WELCOME_PAGES });
         if (WELCOME_HIGHLIGHTS) replaceHighlights(WELCOME_HIGHLIGHTS);
       }
 
       // Set title for unauth Welcome experience
       if (!isLoggedIn && !projectId) {
-        setProjectTitle('Welcome to Hermes');
+        setProjectTitle('Bienvenido');
       }
 
       if (loadedPages) {
+        if (shouldPersistMigratedPages) {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(loadedPages));
+          } catch { /* localStorage unavailable */ }
+          if (isLoggedIn && projectId) saveProjectPages(projectId, loadedPages).catch(() => {});
+        }
         setPages(loadedPages);
         pagesRef.current = loadedPages;
         editor.commands.setContent(loadedPages[activeTab] || '', { contentType: 'markdown' });
@@ -569,40 +591,16 @@ export default function FocusPage() {
     setActionsOpen(false);
   }, [editor]);
 
-  const focusLabel = focusMode === 'off' ? 'Focus: Off' : 'Focus: On';
-
-  const eyeIcon = (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      {settingsVisible && <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" />}
-    </svg>
-  );
-
-  const focusIcon = (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" fill={focusMode !== 'off' ? 'currentColor' : 'none'} />
-      <path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
+  const wordLabel = wordCount === 1 ? t('focusPage.word') : t('focusPage.words');
+  const nextLanguageCode = language === 'es' ? 'EN' : 'ES';
+  const nextLanguageName = language === 'es' ? t('focusPage.english') : t('focusPage.spanish');
 
   return (
     <div className={styles.page}>
-      {/* Floating toggle — only visible when bar is hidden */}
-      {!settingsVisible && (
-        <button
-          className={styles.toggleFloat}
-          onClick={() => setSettingsVisible(true)}
-          aria-label="Show settings"
-        >
-          {eyeIcon}
-        </button>
-      )}
-
       {/* Settings bar */}
       <div className={styles.hoverZone}>
         <div
-          className={`${styles.settingsBar} ${settingsVisible ? styles.settingsBarVisible : ''}`}
+          className={`${styles.settingsBar} ${styles.settingsBarVisible}`}
         >
           {isLoggedIn && projectId ? (
             <ProjectSwitcher
@@ -615,22 +613,14 @@ export default function FocusPage() {
               }}
             />
           ) : (
-            <span className={styles.brandLabel}>{projectTitle || 'Hermes'}</span>
+            <span className={styles.brandLabel}>{projectTitle || 'Diless'}</span>
           )}
 
           <div className={styles.settingsRight}>
-            {isOffline && <span className={styles.offlineBadge}>Offline</span>}
+            {isOffline && <span className={styles.offlineBadge}>{t('focusPage.offline')}</span>}
             <span className={styles.wordCount}>
-              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+              {wordCount} {wordLabel}
             </span>
-            <button
-              className={`${styles.focusBtn} ${focusMode !== 'off' ? styles.focusBtnActive : ''}`}
-              onClick={cycleFocusMode}
-              title={focusLabel}
-            >
-              <span className={styles.focusLabel}>{focusLabel}</span>
-              <span className={styles.focusIcon}>{focusIcon}</span>
-            </button>
             {isLoggedIn && projectId && (
               <ShareButton
                 projectId={projectId}
@@ -651,7 +641,7 @@ export default function FocusPage() {
               <button
                 className={styles.shortcutsBtn}
                 onClick={() => setShortcutsOpen((v) => !v)}
-                title="Shortcuts & formatting"
+                title={t('focusPage.shortcutsAndFormatting')}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -662,35 +652,43 @@ export default function FocusPage() {
               {shortcutsOpen && (
                 <div className={styles.shortcutsPopover}>
                   <div className={styles.shortcutsSection}>
-                    <div className={styles.shortcutsSectionTitle}>Shortcuts</div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+K</kbd><span>Insert link</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+B</kbd><span>Bold</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+I</kbd><span>Italic</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+Z</kbd><span>Undo</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+Shift+Z</kbd><span>Redo</span></div>
+                    <div className={styles.shortcutsSectionTitle}>{t('focusPage.shortcuts')}</div>
+                    <div className={styles.shortcutRow}><kbd>Cmd+K</kbd><span>{t('focusPage.insertLink')}</span></div>
+                    <div className={styles.shortcutRow}><kbd>Cmd+B</kbd><span>{t('focusPage.bold')}</span></div>
+                    <div className={styles.shortcutRow}><kbd>Cmd+I</kbd><span>{t('focusPage.italic')}</span></div>
+                    <div className={styles.shortcutRow}><kbd>Cmd+Z</kbd><span>{t('focusPage.undo')}</span></div>
+                    <div className={styles.shortcutRow}><kbd>Cmd+Shift+Z</kbd><span>{t('focusPage.redo')}</span></div>
                   </div>
                   <div className={styles.shortcutsSection}>
-                    <div className={styles.shortcutsSectionTitle}>Markdown</div>
-                    <div className={styles.shortcutRow}><code># </code><span>Heading</span></div>
-                    <div className={styles.shortcutRow}><code>**text**</code><span>Bold</span></div>
-                    <div className={styles.shortcutRow}><code>*text*</code><span>Italic</span></div>
-                    <div className={styles.shortcutRow}><code>~~text~~</code><span>Strikethrough</span></div>
-                    <div className={styles.shortcutRow}><code>`code`</code><span>Inline code</span></div>
-                    <div className={styles.shortcutRow}><code>&gt; </code><span>Blockquote</span></div>
-                    <div className={styles.shortcutRow}><code>- </code><span>Bullet list</span></div>
-                    <div className={styles.shortcutRow}><code>1. </code><span>Numbered list</span></div>
-                    <div className={styles.shortcutRow}><code>---</code><span>Divider</span></div>
-                    <div className={styles.shortcutRow}><code>[text](url)</code><span>Link</span></div>
+                    <div className={styles.shortcutsSectionTitle}>{t('focusPage.markdown')}</div>
+                    <div className={styles.shortcutRow}><code># </code><span>{t('focusPage.heading')}</span></div>
+                    <div className={styles.shortcutRow}><code>**text**</code><span>{t('focusPage.bold')}</span></div>
+                    <div className={styles.shortcutRow}><code>*text*</code><span>{t('focusPage.italic')}</span></div>
+                    <div className={styles.shortcutRow}><code>~~text~~</code><span>{t('focusPage.strikethrough')}</span></div>
+                    <div className={styles.shortcutRow}><code>`code`</code><span>{t('focusPage.inlineCode')}</span></div>
+                    <div className={styles.shortcutRow}><code>&gt; </code><span>{t('focusPage.blockquote')}</span></div>
+                    <div className={styles.shortcutRow}><code>- </code><span>{t('focusPage.bulletList')}</span></div>
+                    <div className={styles.shortcutRow}><code>1. </code><span>{t('focusPage.numberedList')}</span></div>
+                    <div className={styles.shortcutRow}><code>---</code><span>{t('focusPage.divider')}</span></div>
+                    <div className={styles.shortcutRow}><code>[text](url)</code><span>{t('focusPage.link')}</span></div>
                   </div>
                 </div>
               )}
             </div>
+            <button
+              className={styles.langBtn}
+              onClick={toggleLanguage}
+              title={t('focusPage.languageSwitchTitle')}
+              aria-label={t('focusPage.languageMenuItem', { next: nextLanguageName })}
+            >
+              {nextLanguageCode}
+            </button>
             {/* Mobile actions menu */}
             <div className={styles.actionsWrap} ref={actionsRef}>
               <button
                 className={styles.actionsBtn}
                 onClick={() => setActionsOpen((v) => !v)}
-                title="Actions"
+                title={t('focusPage.actions')}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                   <circle cx="3" cy="8" r="1.5" />
@@ -704,18 +702,8 @@ export default function FocusPage() {
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                       <path d="M2 13h12M2 9h8M2 5h12M2 1h5" />
                     </svg>
-                    {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                    {wordCount} {wordLabel}
                   </div>
-                  <button
-                    className={styles.actionsMenuItem}
-                    onClick={() => {
-                      cycleFocusMode();
-                      setActionsOpen(false);
-                    }}
-                  >
-                    {focusIcon}
-                    {focusLabel}
-                  </button>
                   {isLoggedIn && projectId && (
                     <button
                       className={styles.actionsMenuItem}
@@ -729,9 +717,23 @@ export default function FocusPage() {
                         <path d="M8 10V2" />
                         <path d="M5 5L8 2L11 5" />
                       </svg>
-                      Share post
+                      {t('focusPage.sharePost')}
                     </button>
                   )}
+                  <button
+                    className={styles.actionsMenuItem}
+                    onClick={() => {
+                      toggleLanguage();
+                      setActionsOpen(false);
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8 1.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 0 0 0-13Z" />
+                      <path d="M1.8 8h12.4" />
+                      <path d="M8 1.8c1.6 1.4 2.6 3.7 2.6 6.2S9.6 12.8 8 14.2c-1.6-1.4-2.6-3.7-2.6-6.2S6.4 3.2 8 1.8Z" />
+                    </svg>
+                    {t('focusPage.languageMenuItem', { next: nextLanguageName })}
+                  </button>
                   <button
                     className={styles.actionsMenuItem}
                     onClick={handleCopyPost}
@@ -740,7 +742,7 @@ export default function FocusPage() {
                       <rect x="5" y="5" width="9" height="9" rx="1" />
                       <path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2" />
                     </svg>
-                    {postCopied ? 'Copied!' : 'Copy post'}
+                    {postCopied ? t('focusPage.copied') : t('focusPage.copyPost')}
                   </button>
                 </div>
               )}
@@ -749,14 +751,6 @@ export default function FocusPage() {
               onDropdownOpen={() => setDropdownOpen(true)}
               onDropdownClose={() => setDropdownOpen(false)}
             />
-            {/* Inline toggle — inside the bar */}
-            <button
-              className={styles.toggleInline}
-              onClick={() => setSettingsVisible(false)}
-              aria-label="Hide settings"
-            >
-              {eyeIcon}
-            </button>
           </div>
         </div>
       </div>
@@ -776,16 +770,13 @@ export default function FocusPage() {
             />
           ) : isLoggedIn && projectId ? (
             <button className={styles.pageTitleText} onClick={startEditingTitle}>
-              {projectTitle || 'Untitled'}
+              {projectTitle || t('focusPage.untitled')}
             </button>
           ) : (
-            <span className={styles.pageTitleText}>{projectTitle || 'Untitled'}</span>
+            <span className={styles.pageTitleText}>{projectTitle || t('focusPage.untitled')}</span>
           )}
         </div>
-        {/* Page tabs — scroll with content */}
-        <div className={styles.tabsArea}>
-          <PageTabs activeTab={activeTab} onTabChange={handleTabChange} pages={pages} />
-        </div>
+        {/* Single canvas mode (tabs removed in Diless MVP) */}
         {/* Optional subtitle */}
         <div className={styles.subtitle}>
           {isLoggedIn && projectId && editingSubtitle ? (
@@ -795,7 +786,7 @@ export default function FocusPage() {
               onChange={(e) => setSubtitleEditValue(e.target.value)}
               onKeyDown={handleSubtitleKeyDown}
               onBlur={handleSubtitleBlur}
-              placeholder="Add a subtitle..."
+              placeholder={t('focusPage.addSubtitlePlaceholder')}
               autoFocus
             />
           ) : projectSubtitle ? (
@@ -808,7 +799,7 @@ export default function FocusPage() {
             )
           ) : isLoggedIn && projectId ? (
             <button className={styles.subtitleAdd} onClick={startEditingSubtitle}>
-              Add subtitle...
+              {t('focusPage.addSubtitle')}
             </button>
           ) : null}
         </div>
@@ -831,17 +822,19 @@ export default function FocusPage() {
       {/* Link tooltip */}
       <LinkTooltip tooltip={linkTooltip} isMac={isMac} />
 
-      {/* Floating chat window */}
-      <Sentry.ErrorBoundary fallback={<div style={{ position: 'fixed', bottom: 24, left: 24, color: 'var(--text-muted)', fontSize: 13 }}>Chat unavailable</div>}>
-        <FocusChatWindow
-          projectId={projectId}
-          getPages={getPages}
-          activeTab={activeTab}
-          onHighlights={handleHighlights}
-          session={session}
-          isOffline={isOffline}
-        />
-      </Sentry.ErrorBoundary>
+      {/* Floating chat window (optional in MVP) */}
+      {aiEnabled ? (
+        <Sentry.ErrorBoundary fallback={<div style={{ position: 'fixed', bottom: 24, left: 24, color: 'var(--text-muted)', fontSize: 13 }}>{t('focusPage.chatUnavailable')}</div>}>
+          <FocusChatWindow
+            projectId={projectId}
+            getPages={getPages}
+            activeTab={activeTab}
+            onHighlights={handleHighlights}
+            session={session}
+            isOffline={isOffline}
+          />
+        </Sentry.ErrorBoundary>
+      ) : null}
 
       <SignupToast wordCount={wordCount} isLoggedIn={isLoggedIn} />
     </div>

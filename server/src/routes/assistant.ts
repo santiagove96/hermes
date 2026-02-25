@@ -11,8 +11,23 @@ import type { UserMcpServerConfig } from '../lib/mcp.js';
 
 const router = Router();
 
-const anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const AI_ENABLED = process.env.AI_ENABLED !== 'false';
+const anthro = AI_ENABLED && process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
 const MODEL = 'claude-sonnet-4-6';
+
+function requireAiEnabled(_req: Request, res: Response, next: () => void) {
+  if (!AI_ENABLED || !anthro) {
+    res.status(503).json({
+      error: 'AI assistant is disabled',
+      code: 'AI_DISABLED',
+      message: 'AI features are turned off for this deployment.',
+    });
+    return;
+  }
+  next();
+}
 
 type SourceData = {
   url: string;
@@ -88,7 +103,7 @@ const CITE_SOURCE_TOOL: Anthropic.Messages.Tool = {
   },
 };
 
-const SYSTEM_PROMPT_BASE = `You are Hermes, a thoughtful writing assistant. You're the kind of reader every writer wishes they had — someone who pays close attention, asks the questions that unlock better thinking, and isn't afraid to point out where the writing falls short. You respond with both chat messages and inline highlights on their text.
+const SYSTEM_PROMPT_BASE = `You are Diless, a thoughtful writing assistant. You're the kind of reader every writer wishes they had — someone who pays close attention, asks the questions that unlock better thinking, and isn't afraid to point out where the writing falls short. You respond with both chat messages and inline highlights on their text.
 
 Your role:
 - Ask probing questions that help the writer think deeper
@@ -185,7 +200,7 @@ async function getOwnedProject(projectId: string, userId: string) {
   return data;
 }
 
-router.post('/chat', requireAuth, checkMessageLimit, async (req: Request, res: Response) => {
+router.post('/chat', requireAuth, requireAiEnabled, checkMessageLimit, async (req: Request, res: Response) => {
   const parsed = ChatSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({

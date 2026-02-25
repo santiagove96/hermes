@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import posthog from 'posthog-js';
 import { publishProject, unpublishProject, updatePublishSettings, generateSlug } from '@hermes/api';
+import useLanguage from '../../hooks/useLanguage';
 import styles from './ShareButton.module.css';
 
 function useTimeoutRef() {
@@ -9,13 +10,7 @@ function useTimeoutRef() {
   return ref;
 }
 
-const TAB_COLORS = {
-  coral: '#e07a5f',
-  amber: '#e0a05f',
-  sage: '#6b9e7a',
-  sky: '#5f8fc9',
-  lavender: '#9a7ec8',
-};
+const SINGLE_CANVAS_TAB = 'coral';
 
 export default function ShareButton({
   projectId,
@@ -25,14 +20,14 @@ export default function ShareButton({
   shortId,
   slug,
   authorName: initialAuthorName,
-  publishedTabs: initialPublishedTabs,
+  publishedTabs: _initialPublishedTabs,
   onPublishChange,
   isOpen,
   onOpenChange,
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [authorName, setAuthorName] = useState(initialAuthorName || '');
-  const [selectedTabs, setSelectedTabs] = useState(initialPublishedTabs || []);
   const [publishing, setPublishing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updated, setUpdated] = useState(false);
@@ -51,9 +46,6 @@ export default function ShareButton({
   useEffect(() => {
     setAuthorName(initialAuthorName || '');
   }, [initialAuthorName]);
-  useEffect(() => {
-    setSelectedTabs(initialPublishedTabs || []);
-  }, [initialPublishedTabs]);
 
   // Outside click close
   useEffect(() => {
@@ -83,33 +75,16 @@ export default function ShareButton({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onOpenChange]);
 
-  // Tabs with content — read on-demand so this component doesn't re-render on every keystroke
+  // Single-canvas publish mode: always publish the primary canvas tab.
   const pages = getPages();
-  const tabsWithContent = Object.entries(pages)
-    .filter(([, content]) => content?.trim())
-    .map(([key]) => key);
-
-  const toggleTab = useCallback((tabKey) => {
-    setSelectedTabs((prev) => {
-      const next = prev.includes(tabKey)
-        ? prev.filter((t) => t !== tabKey)
-        : [...prev, tabKey];
-
-      // Auto-save if already published
-      if (published && projectId) {
-        updatePublishSettings(projectId, { published_tabs: next }).catch((err) => console.error('Tab update failed:', err));
-        onPublishChange?.({ publishedTabs: next });
-      }
-
-      return next;
-    });
-  }, [published, projectId, onPublishChange]);
+  const hasPublishableContent = !!pages[SINGLE_CANVAS_TAB]?.trim();
+  const publishTabs = hasPublishableContent ? [SINGLE_CANVAS_TAB] : [];
 
   const handlePublish = useCallback(async () => {
     if (!projectId || publishing) return;
     setPublishing(true);
     try {
-      const result = await publishProject(projectId, authorName, selectedTabs);
+      const result = await publishProject(projectId, authorName, publishTabs);
       onPublishChange?.({
         published: true,
         shortId: result.shortId,
@@ -126,13 +101,13 @@ export default function ShareButton({
       console.error('Publish failed:', err);
     }
     setPublishing(false);
-  }, [projectId, authorName, selectedTabs, publishing, onPublishChange]);
+  }, [projectId, authorName, publishTabs, publishing, onPublishChange]);
 
   const handleUpdate = useCallback(async () => {
     if (!projectId || updating) return;
     setUpdating(true);
     try {
-      const result = await publishProject(projectId, authorName, selectedTabs);
+      const result = await publishProject(projectId, authorName, publishTabs);
       onPublishChange?.({
         published: true,
         shortId: result.shortId,
@@ -147,7 +122,7 @@ export default function ShareButton({
       console.error('Update failed:', err);
     }
     setUpdating(false);
-  }, [projectId, authorName, selectedTabs, updating, onPublishChange, updatedTimerRef]);
+  }, [projectId, authorName, publishTabs, updating, onPublishChange, updatedTimerRef]);
 
   const handleUnpublish = useCallback(async () => {
     if (!projectId) return;
@@ -193,7 +168,7 @@ export default function ShareButton({
       <button
         className={`${styles.trigger} ${published ? styles.triggerPublished : ''}`}
         onClick={() => setOpen((v) => !v)}
-        title={published ? 'Manage published post' : 'Share post'}
+        title={published ? t('shareButton.managePublishedPost') : t('shareButton.sharePost')}
       >
         {shareIcon}
       </button>
@@ -202,12 +177,12 @@ export default function ShareButton({
         <div className={styles.panel}>
           {published ? (
             <>
-              <h3 className={styles.heading}>Published</h3>
+              <h3 className={styles.heading}>{t('shareButton.published')}</h3>
 
               <div className={styles.urlRow}>
                 <span className={styles.urlDisplay}>{readUrl}</span>
                 <button className={styles.copyBtn} onClick={handleCopy}>
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? t('shareButton.copied') : t('shareButton.copy')}
                 </button>
               </div>
 
@@ -217,41 +192,21 @@ export default function ShareButton({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Open in new tab
+                {t('shareButton.openInNewTab')}
               </a>
 
               <hr className={styles.separator} />
 
               <div className={styles.field}>
-                <label className={styles.label}>Author name</label>
+                <label className={styles.label}>{t('shareButton.authorName')}</label>
                 <input
                   className={styles.input}
                   type="text"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
                   onBlur={handleAuthorBlur}
-                  placeholder="Your name"
+                  placeholder={t('shareButton.yourName')}
                 />
-              </div>
-
-              <div className={styles.field}>
-                <label className={styles.label}>Published tabs</label>
-                <div className={styles.tabList}>
-                  {tabsWithContent.map((tab) => (
-                    <label key={tab} className={styles.tabCheck}>
-                      <input
-                        type="checkbox"
-                        checked={selectedTabs.includes(tab)}
-                        onChange={() => toggleTab(tab)}
-                      />
-                      <span
-                        className={styles.tabDot}
-                        style={{ backgroundColor: TAB_COLORS[tab] || '#999' }}
-                      />
-                      {tab}
-                    </label>
-                  ))}
-                </div>
               </div>
 
               <button
@@ -259,10 +214,10 @@ export default function ShareButton({
                 onClick={handleUpdate}
                 disabled={updating}
               >
-                {updating ? 'Updating...' : updated ? 'Updated' : 'Update published content'}
+                {updating ? t('shareButton.updating') : updated ? t('shareButton.updated') : t('shareButton.updatePublishedContent')}
               </button>
               {updated && (
-                <p className={styles.updateNote}>Readers will see your latest changes.</p>
+                <p className={styles.updateNote}>{t('shareButton.readersWillSeeLatestChanges')}</p>
               )}
 
               <button
@@ -275,55 +230,35 @@ export default function ShareButton({
                   }
                 }}
               >
-                {confirmUnpublish ? 'Confirm unpublish' : 'Unpublish'}
+                {confirmUnpublish ? t('shareButton.confirmUnpublish') : t('shareButton.unpublish')}
               </button>
               {confirmUnpublish && (
-                <p className={styles.warning}>The link will stop working immediately.</p>
+                <p className={styles.warning}>{t('shareButton.linkWillStopWorkingImmediately')}</p>
               )}
             </>
           ) : (
             <>
-              <h3 className={styles.heading}>Share post</h3>
+              <h3 className={styles.heading}>{t('shareButton.sharePost')}</h3>
 
               <div className={styles.field}>
-                <label className={styles.label}>Author name</label>
+                <label className={styles.label}>{t('shareButton.authorName')}</label>
                 <input
                   className={styles.input}
                   type="text"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t('shareButton.yourName')}
                 />
-              </div>
-
-              <div className={styles.field}>
-                <label className={styles.label}>Tabs to publish</label>
-                <div className={styles.tabList}>
-                  {tabsWithContent.map((tab) => (
-                    <label key={tab} className={styles.tabCheck}>
-                      <input
-                        type="checkbox"
-                        checked={selectedTabs.includes(tab)}
-                        onChange={() => toggleTab(tab)}
-                      />
-                      <span
-                        className={styles.tabDot}
-                        style={{ backgroundColor: TAB_COLORS[tab] || '#999' }}
-                      />
-                      {tab}
-                    </label>
-                  ))}
-                </div>
               </div>
 
               <button
                 className={styles.publishBtn}
                 onClick={handlePublish}
-                disabled={publishing || selectedTabs.length === 0}
+                disabled={publishing || !hasPublishableContent}
               >
-                {publishing ? 'Publishing...' : 'Publish'}
+                {publishing ? t('shareButton.publishing') : t('shareButton.publish')}
               </button>
-              <p className={styles.note}>Anyone with the link can read</p>
+              <p className={styles.note}>{t('shareButton.anyoneWithLinkCanRead')}</p>
             </>
           )}
         </div>

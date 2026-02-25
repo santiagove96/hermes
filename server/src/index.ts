@@ -21,13 +21,22 @@ Sentry.init({
   tracesSampleRate: 0.2,
 });
 
+const aiEnabled = process.env.AI_ENABLED !== 'false';
+
 // Startup checks for required env vars
-const requiredEnv = ['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ANON_KEY', 'FRONTEND_URL'];
+const requiredEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ANON_KEY', 'FRONTEND_URL'];
+if (aiEnabled) {
+  requiredEnv.unshift('ANTHROPIC_API_KEY');
+}
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     logger.error({ key }, 'Missing required environment variable');
     process.exit(1);
   }
+}
+
+if (!aiEnabled) {
+  logger.info('AI assistant disabled (AI_ENABLED=false)');
 }
 
 // Warn about optional but important env vars

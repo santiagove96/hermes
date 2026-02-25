@@ -1,9 +1,9 @@
-export const WELCOME_TITLE = 'Welcome to Hermes';
+export const WELCOME_TITLE = 'Welcome to Diless';
 
 export const WELCOME_PAGES: Record<string, string> = {
   coral: `# The Editor
 
-Hermes is a writing tool that helps you think deeper — without doing the writing for you.
+Diless is a writing tool that helps you think deeper — without doing the writing for you.
 
 You're looking at a **rich markdown editor**. Everything you type is saved automatically. Try out a few things:
 
@@ -20,7 +20,7 @@ Click a tab to switch. Your content is preserved across all of them.
 
 ## What makes this different
 
-Most AI writing tools generate text for you. Hermes takes the opposite approach: it helps you develop *your own* ideas through structured thinking, honest feedback, and careful questions. The words are always yours.`,
+Most AI writing tools generate text for you. Diless takes the opposite approach: it helps you develop *your own* ideas through structured thinking, honest feedback, and careful questions. The words are always yours.`,
 
   amber: `# The Assistant
 
@@ -39,25 +39,25 @@ For example, it might ask a probing question, offer a suggestion, propose a spec
 
 ## Philosophy
 
-Hermes believes the act of writing is where thinking happens. If an AI writes your draft, you skip the part that matters most — the struggle to find what you actually mean.
+Diless believes the act of writing is where thinking happens. If an AI writes your draft, you skip the part that matters most — the struggle to find what you actually mean.
 
 Instead, the assistant helps you go deeper: challenging weak arguments, asking what you really intended, and surfacing connections you might have missed. It's a collaborator, not a ghostwriter.
 
-*Start free with 10 messages a day. [Sign up](https://dearhermes.com/signup) to get started, or [become a Patron](https://dearhermes.com/upgrade) to support development and unlock more.*`,
+*Start free with 10 messages a day. [Sign up](https://diless.vercel.app/signup) to get started, or [become a Patron](https://diless.vercel.app/upgrade) to support development and unlock more.*`,
 
-  sage: `# About Hermes
+  sage: `# About Diless
 
-Hermes is built on a design philosophy called **[Dignified Technology](http://dignifiedtechnology.org/)** — the idea that tools should protect and elevate the creative, expressive, and irreplaceable dimensions of human work.
+Diless is built on a design philosophy called **[Dignified Technology](http://dignifiedtechnology.org/)** — the idea that tools should protect and elevate the creative, expressive, and irreplaceable dimensions of human work.
 
-Every AI product makes a choice: use the technology to *replace* the human in the process, or use it to help them go *deeper*. Hermes chooses depth. The writing is yours. The thinking is yours. The tool just helps you do both better.
+Every AI product makes a choice: use the technology to *replace* the human in the process, or use it to help them go *deeper*. Diless chooses depth. The writing is yours. The thinking is yours. The tool just helps you do both better.
 
 You can read the full essay — *What Does a Tool Owe You?* — in the project switcher. It ships with every new account.
 
 ## Open source
 
-Hermes is open source. You can read the code, suggest improvements, or fork it for your own use.
+Diless is open source. You can read the code, suggest improvements, or fork it for your own use.
 
-[GitHub repository](https://github.com/xaelophone/hermes)`,
+[GitHub repository](https://github.com/santiagove96/hermes)`,
 
   sky: '',
   lavender: '',

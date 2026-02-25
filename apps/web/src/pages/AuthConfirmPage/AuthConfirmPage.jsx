@@ -72,7 +72,7 @@ export default function AuthConfirmPage() {
   return (
     <main className={styles.main}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Hermes Auth</h1>
+        <h1 className={styles.title}>Diless Auth</h1>
         <p className={styles.status}>{status}</p>
         {error ? <p className={styles.error}>{error}</p> : null}
 

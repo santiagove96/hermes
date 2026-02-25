@@ -1,3 +1,35 @@
+@font-face {
+  font-family: 'Diless Helvetica Neue';
+  src: url('./assets/fonts/HelveticaNeue-Roman.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Diless Helvetica Neue';
+  src: url('./assets/fonts/HelveticaNeueItalic.ttf') format('truetype');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Diless Helvetica Neue';
+  src: url('./assets/fonts/HelveticaNeueBold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Diless Helvetica Neue';
+  src: url('./assets/fonts/HelveticaNeueBoldItalic.ttf') format('truetype');
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+}
+
 /* ===== RESET ===== */
 *,
 *::before,
@@ -32,6 +64,7 @@
   --content-padding: 65px;
   --content-padding-bottom: 60px;
   --font-sans: Arial, Helvetica, sans-serif;
+  --font-reading: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-xs: 11px;
   --font-sm: 13px;
   --font-base: 15px;
