@@ -16,6 +16,8 @@
     "server:dev:staging": "DOTENV_CONFIG_PATH=server/.env.staging npm run server:dev",
     "web:dev:staging": "npm run dev:staging -w @hermes/web",
     "server:typecheck": "npm run typecheck -w server",
+    "vercel:preview": "npx vercel deploy -y",
+    "vercel:prod": "npx vercel deploy --prod -y",
     "test:web": "playwright test",
     "lint": "eslint .",
     "native:dev": "cd apps/native && cargo tauri dev",
