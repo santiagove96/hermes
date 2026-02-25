@@ -15,7 +15,10 @@ const AI_ENABLED = process.env.AI_ENABLED !== 'false';
 const anthro = AI_ENABLED && process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+const TEMPERATURE = Number.isFinite(Number(process.env.ANTHROPIC_TEMPERATURE))
+  ? Math.min(1, Math.max(0, Number(process.env.ANTHROPIC_TEMPERATURE)))
+  : 0.7;
 
 function requireAiEnabled(_req: Request, res: Response, next: () => void) {
   if (!AI_ENABLED || !anthro) {
@@ -201,6 +204,16 @@ async function getOwnedProject(projectId: string, userId: string) {
 }
 
 router.post('/chat', requireAuth, requireAiEnabled, checkMessageLimit, async (req: Request, res: Response) => {
+  const anthropicClient = anthro;
+  if (!anthropicClient) {
+    res.status(503).json({
+      error: 'AI assistant is disabled',
+      code: 'AI_DISABLED',
+      message: 'AI features are turned off for this deployment.',
+    });
+    return;
+  }
+
   const parsed = ChatSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -360,10 +373,10 @@ router.post('/chat', requireAuth, requireAiEnabled, checkMessageLimit, async (re
 
       let response;
       try {
-        response = await anthro.messages.create({
+        response = await anthropicClient.messages.create({
           model: MODEL,
           max_tokens: getMaxTokens(pages),
-          temperature: 0.7,
+          temperature: TEMPERATURE,
           system: systemContent,
           tools,
           messages,

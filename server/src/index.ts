@@ -22,6 +22,7 @@ Sentry.init({
 });
 
 const aiEnabled = process.env.AI_ENABLED !== 'false';
+const anthropicModel = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 // Startup checks for required env vars
 const requiredEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ANON_KEY', 'FRONTEND_URL'];
@@ -37,6 +38,8 @@ for (const key of requiredEnv) {
 
 if (!aiEnabled) {
   logger.info('AI assistant disabled (AI_ENABLED=false)');
+} else {
+  logger.info({ provider: 'anthropic', model: anthropicModel }, 'AI assistant enabled');
 }
 
 // Warn about optional but important env vars
@@ -73,7 +76,14 @@ app.use(express.json({ limit: '1mb' }));
 
 // Health check — before rate limiter so monitoring doesn't count
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    ai: {
+      enabled: aiEnabled,
+      provider: aiEnabled ? 'anthropic' : null,
+      model: aiEnabled ? anthropicModel : null,
+    },
+  });
 });
 
 // Global rate limit: 300 req / 15 min
