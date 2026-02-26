@@ -4,7 +4,7 @@ import logger from '../lib/logger.js';
 import { FREE_DAILY_LIMIT, PRO_MONTHLY_LIMIT, TRIAL_MONTHLY_LIMIT } from '../lib/limits.js';
 
 const UNLIMITED_EMAILS = new Set([
-  'santiventura@gmail.com',
+  'santiventura.96@gmail.com',
   ...((process.env.UNLIMITED_USAGE_EMAILS || '')
     .split(',')
     .map((e) => e.trim().toLowerCase())
