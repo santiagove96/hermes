@@ -3,7 +3,7 @@
   inset: 0;
   background: var(--bg-base);
   font-family: var(--font-reading);
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .scrollArea {
@@ -34,9 +34,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 20px;
-  background: rgba(245, 245, 240, 0.95);
+  background: color-mix(in srgb, var(--bg-base) 95%, transparent);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   opacity: 0;
   transform: translateY(-4px);
   transition: opacity 200ms ease, transform 200ms ease;
@@ -50,27 +50,32 @@
 }
 
 .brandLabel {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 13px;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-body-size);
   font-weight: 500;
-  color: #999;
+  color: var(--text-dim);
 }
 
 .settingsRight {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.settingsRight > * {
+  flex-shrink: 0;
 }
 
 .focusBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
-  color: #999;
+  color: var(--text-dim);
   background: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: 4px 6px;
   cursor: pointer;
@@ -79,13 +84,13 @@
 }
 
 .focusBtn:hover {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  border-color: var(--neutral-hover-border);
 }
 
 .focusBtnActive {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
 }
 
 .langBtn {
@@ -96,22 +101,22 @@
   height: 24px;
   box-sizing: border-box;
   background: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: 0 8px;
-  color: #999;
+  color: var(--text-dim);
   cursor: pointer;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-caption-size);
+  font-weight: var(--type-ui-caption-weight);
+  letter-spacing: var(--tracking-label);
   line-height: 1;
   transition: color 150ms ease, border-color 150ms ease;
 }
 
 .langBtn:hover {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  border-color: var(--neutral-hover-border);
 }
 
 /* Shortcuts reference — positioned relative for popover */
@@ -124,18 +129,18 @@
   align-items: center;
   justify-content: center;
   background: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: 4px 6px;
-  color: #999;
+  color: var(--text-dim);
   cursor: pointer;
   line-height: 0;
   transition: color 150ms ease, border-color 150ms ease;
 }
 
 .shortcutsBtn:hover {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  border-color: var(--neutral-hover-border);
 }
 
 .shortcutsPopover {
@@ -143,10 +148,10 @@
   top: calc(100% + 8px);
   right: 0;
   width: 240px;
-  background: var(--bg-base);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px var(--focus-ring-soft);
   padding: 12px;
   z-index: 300;
 }
@@ -160,11 +165,13 @@
 }
 
 .shortcutsSectionTitle {
-  font-size: 11px;
-  font-weight: 600;
-  color: #999;
+  font-family: var(--type-mono-xs-family);
+  font-size: var(--type-mono-xs-size);
+  font-weight: var(--type-mono-xs-weight);
+  line-height: var(--type-mono-xs-line);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--type-mono-xs-tracking);
   margin-bottom: 6px;
 }
 
@@ -173,34 +180,36 @@
   justify-content: space-between;
   align-items: center;
   padding: 2px 0;
-  font-size: 12px;
-  color: #666;
+  font-size: var(--type-ui-meta-size);
+  line-height: var(--type-ui-meta-line);
+  color: var(--text-muted);
 }
 
 .shortcutRow kbd,
 .shortcutRow code {
-  font-family: 'SF Mono', 'Menlo', monospace;
-  font-size: 11px;
-  color: #555;
-  background: rgba(0, 0, 0, 0.05);
+  font-family: var(--font-code);
+  font-size: var(--type-ui-caption-size);
+  color: var(--text-dim);
+  background: var(--code-inline-bg);
   padding: 1px 5px;
   border-radius: 3px;
 }
 
 .offlineBadge {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  color: #b45309;
-  background: rgba(180, 83, 9, 0.1);
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-caption-size);
+  font-weight: var(--type-ui-caption-weight);
+  color: var(--warning);
+  background: var(--warning-bg);
   padding: 2px 8px;
   border-radius: 10px;
 }
 
 .wordCount {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 13px;
-  color: #bbb;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-body-size);
+  line-height: var(--type-ui-body-line);
+  color: var(--text-dim);
   text-align: right;
 }
 
@@ -208,7 +217,7 @@
 .pageTitle {
   max-width: 680px;
   margin: 0 auto;
-  padding: 64px 24px 0;
+  padding: 96px 24px 0;
 }
 
 .pageTitleText {
@@ -217,17 +226,21 @@
   background: none;
   border: none;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-family: var(--type-ui-title-family);
+  font-size: var(--type-ui-title-size);
+  font-weight: var(--type-ui-title-weight);
+  color: var(--text-primary);
   cursor: text;
   text-align: left;
-  line-height: 1.4;
+  line-height: var(--type-ui-title-line);
+  font-variation-settings:
+    'GRAD' var(--type-ui-title-serif-grad),
+    'wdth' var(--type-ui-title-serif-wdth),
+    'opsz' var(--type-ui-title-serif-opsz);
 }
 
 .pageTitleText:hover {
-  color: #444;
+  color: var(--text-muted);
 }
 
 .pageTitleInput {
@@ -235,18 +248,21 @@
   width: 100%;
   background: none;
   border: none;
-  border-bottom: 1.5px solid transparent;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-family: var(--type-ui-title-family);
+  font-size: var(--type-ui-title-size);
+  font-weight: var(--type-ui-title-weight);
+  color: var(--text-primary);
   outline: none;
-  line-height: 1.4;
+  line-height: var(--type-ui-title-line);
+  font-variation-settings:
+    'GRAD' var(--type-ui-title-serif-grad),
+    'wdth' var(--type-ui-title-serif-wdth),
+    'opsz' var(--type-ui-title-serif-opsz);
 }
 
 .pageTitleInput:focus {
-  border-bottom-color: rgba(0, 0, 0, 0.2);
+  border-bottom-color: transparent;
 }
 
 /* Optional subtitle — between tabs and editor */
@@ -262,17 +278,17 @@
   background: none;
   border: none;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  color: #888;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-subtitle-size);
+  font-weight: var(--type-ui-subtitle-weight);
+  color: var(--text-muted);
   cursor: text;
   text-align: left;
-  line-height: 1.4;
+  line-height: var(--type-ui-subtitle-line);
 }
 
 .subtitleText:hover {
-  color: #666;
+  color: var(--text-muted);
 }
 
 .subtitleInput {
@@ -280,18 +296,17 @@
   width: 100%;
   background: none;
   border: none;
-  border-bottom: 1.5px solid transparent;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  color: #888;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-subtitle-size);
+  font-weight: var(--type-ui-subtitle-weight);
+  color: var(--text-muted);
   outline: none;
-  line-height: 1.4;
+  line-height: var(--type-ui-subtitle-line);
 }
 
 .subtitleInput:focus {
-  border-bottom-color: rgba(0, 0, 0, 0.15);
+  border-bottom-color: transparent;
 }
 
 .subtitleAdd {
@@ -299,18 +314,18 @@
   background: none;
   border: none;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  color: #ccc;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-subtitle-size);
+  font-weight: var(--type-ui-subtitle-weight);
+  color: var(--text-dim);
   font-style: italic;
   cursor: text;
   text-align: left;
-  line-height: 1.4;
+  line-height: var(--type-ui-subtitle-line);
 }
 
 .subtitleAdd:hover {
-  color: #999;
+  color: var(--text-muted);
 }
 
 /* Page tabs area — scrolls with content */
@@ -325,14 +340,15 @@
   outline: none;
   min-height: 60vh;
   font-family: var(--font-reading);
-  font-size: 18px;
-  line-height: 26px;
-  caret-color: #1a1a1a;
+  font-size: var(--type-reading-body-size);
+  line-height: var(--type-reading-body-line);
+  letter-spacing: var(--type-reading-body-tracking);
+  caret-color: var(--text-primary);
 }
 
 .editorWrap :global(.tiptap) :global(.is-editor-empty):first-child::before {
   content: attr(data-placeholder);
-  color: #c0bdb5;
+  color: var(--content-placeholder);
   float: left;
   height: 0;
   pointer-events: none;
@@ -340,77 +356,92 @@
 
 /* Typography */
 .editorWrap :global(.tiptap) p {
-  margin: 0 0 1em;
+  margin: 0 0 24px;
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) h1 {
-  font-size: 1.6em;
-  font-weight: 700;
-  margin: 1.4em 0 0.6em;
-  line-height: 1.3;
+  font-family: var(--type-reading-h1-family);
+  font-size: var(--type-reading-h1-size);
+  font-weight: var(--type-reading-h1-weight);
+  margin: 1.4em 0 24px;
+  line-height: var(--type-reading-h1-line);
+  font-variation-settings:
+    'GRAD' var(--type-reading-h1-serif-grad),
+    'wdth' var(--type-reading-h1-serif-wdth),
+    'opsz' var(--type-reading-h1-serif-opsz);
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) h2 {
-  font-size: 1.3em;
-  font-weight: 700;
-  margin: 1.2em 0 0.5em;
-  line-height: 1.35;
+  font-family: var(--type-reading-h2-family);
+  font-size: var(--type-reading-h2-size);
+  font-weight: var(--type-reading-h2-weight);
+  margin: 1.2em 0 24px;
+  line-height: var(--type-reading-h2-line);
+  font-variation-settings:
+    'GRAD' var(--type-reading-h2-serif-grad),
+    'wdth' var(--type-reading-h2-serif-wdth),
+    'opsz' var(--type-reading-h2-serif-opsz);
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) h3 {
-  font-size: 1.1em;
-  font-weight: 700;
-  margin: 1em 0 0.4em;
-  line-height: 1.4;
+  font-family: var(--type-reading-h3-family);
+  font-size: var(--type-reading-h3-size);
+  font-weight: var(--type-reading-h3-weight);
+  margin: 1em 0 24px;
+  line-height: var(--type-reading-h3-line);
+  font-variation-settings:
+    'GRAD' var(--type-reading-h3-serif-grad),
+    'wdth' var(--type-reading-h3-serif-wdth),
+    'opsz' var(--type-reading-h3-serif-opsz);
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) blockquote {
-  border-left: 2px solid #d0cdc5;
-  margin: 1em 0;
+  border-left: 2px solid var(--content-rule);
+  margin: 1em 0 24px;
   padding-left: 1em;
-  color: #666;
+  color: var(--text-muted);
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) code {
-  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-  background: rgba(0, 0, 0, 0.05);
+  font-family: var(--font-code);
+  background: var(--code-inline-bg);
   padding: 2px 5px;
   border-radius: 3px;
-  font-size: 0.9em;
+  font-size: var(--type-code-inline-size);
 }
 
 .editorWrap :global(.tiptap) pre {
-  background: #eae8e2;
+  background: var(--bg-overlay);
   padding: 16px;
   border-radius: 4px;
-  margin: 1em 0;
+  margin: 1em 0 24px;
   overflow-x: auto;
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) pre code {
-  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-family: var(--font-code);
   background: none;
   padding: 0;
   border-radius: 0;
-  font-size: 14px;
+  font-size: var(--type-code-block-size);
 }
 
 .editorWrap :global(.tiptap) hr {
   border: none;
-  border-top: 1px solid #d0cdc5;
-  margin: 2em 0;
+  border-top: 1px solid var(--content-rule);
+  margin: 2em 0 24px;
   transition: opacity 250ms ease;
 }
 
 .editorWrap :global(.tiptap) ul,
 .editorWrap :global(.tiptap) ol {
-  margin: 0.5em 0 1em;
+  margin: 0.5em 0 24px;
   padding-left: 1.5em;
   transition: opacity 250ms ease;
 }
@@ -424,7 +455,19 @@
 }
 
 .editorWrap :global(.tiptap) li {
-  margin-bottom: 0.3em;
+  margin-bottom: 12px;
+}
+
+.editorWrap :global(.tiptap) li:last-child {
+  margin-bottom: 0;
+}
+
+.editorWrap :global(.tiptap) li > p {
+  margin: 0;
+}
+
+.editorWrap :global(.tiptap) li > p + p {
+  margin-top: 12px;
 }
 
 .editorWrap :global(.tiptap) strong {
@@ -432,16 +475,16 @@
 }
 
 .editorWrap :global(.tiptap) a {
-  color: #1a1a1a;
+  color: var(--text-primary);
   text-decoration: underline;
-  text-decoration-color: rgba(0, 0, 0, 0.3);
+  text-decoration-color: var(--underline-default);
   text-underline-offset: 2px;
   cursor: text;
   transition: text-decoration-color 150ms ease;
 }
 
 .editorWrap :global(.tiptap) a:hover {
-  text-decoration-color: rgba(0, 0, 0, 0.6);
+  text-decoration-color: var(--underline-strong);
 }
 
 /* Inline link editing — subtle highlight while typing URL in [text](url) */
@@ -556,18 +599,18 @@
   align-items: center;
   justify-content: center;
   background: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: 4px 6px;
-  color: #999;
+  color: var(--text-dim);
   cursor: pointer;
   line-height: 0;
   transition: color 150ms ease, border-color 150ms ease;
 }
 
 .actionsBtn:hover {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  border-color: var(--neutral-hover-border);
 }
 
 .actionsMenu {
@@ -575,10 +618,10 @@
   top: calc(100% + 6px);
   right: 0;
   min-width: 160px;
-  background: var(--bg-base);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px var(--focus-ring-soft);
   z-index: 300;
   overflow: hidden;
 }
@@ -591,22 +634,22 @@
   padding: 10px 12px;
   background: none;
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border-subtle);
   text-align: left;
   cursor: pointer;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
-  color: #1a1a1a;
+  color: var(--text-primary);
   transition: background 100ms ease;
 }
 
 .actionsMenuItem:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--hover-medium);
 }
 
 .actionsMenuItem svg {
   flex-shrink: 0;
-  color: #999;
+  color: var(--text-dim);
 }
 
 .actionsMenuInfo {
@@ -614,9 +657,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-dim);
 }
 
 /* Focus button — always icon-only */
@@ -639,20 +682,20 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(245, 245, 240, 0.85);
+  background: color-mix(in srgb, var(--bg-overlay) 85%, transparent);
   border: none;
-  color: #bbb;
+  color: var(--text-dim);
   cursor: pointer;
   z-index: 150;
   padding: 0;
 }
 
 .toggleFloat:hover {
-  color: #888;
+  color: var(--text-dim);
 }
 
 .toggleFloat:active {
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* Eye toggle — inline (inside the bar) */
@@ -665,18 +708,18 @@
   border-radius: 50%;
   background: none;
   border: none;
-  color: #bbb;
+  color: var(--text-dim);
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
 }
 
 .toggleInline:hover {
-  color: #888;
+  color: var(--text-dim);
 }
 
 .toggleInline:active {
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* Responsive */
@@ -691,21 +734,6 @@
     padding: 12px 16px 0;
   }
 
-  /* Prevent iOS zoom on input focus (must be >= 16px) */
-  .editorWrap :global(.tiptap) {
-    font-size: 16px;
-  }
-
-  .pageTitleInput,
-  .pageTitleText {
-    font-size: 16px;
-  }
-
-  .subtitleInput,
-  .subtitleText {
-    font-size: 16px;
-  }
-
   /* Touch-friendly overscroll + safe area offset */
   .scrollArea {
     top: env(safe-area-inset-top);
@@ -715,6 +743,10 @@
 
   .settingsBar {
     padding: 10px 12px;
+  }
+
+  .settingsRight {
+    gap: 12px;
   }
 
   .shortcutsWrap {
@@ -728,10 +760,6 @@
 
   /* Hide word count — moved into actions menu */
   .wordCount {
-    display: none;
-  }
-
-  .langBtn {
     display: none;
   }
 
@@ -752,6 +780,6 @@
   }
 
   .pageTitle {
-    padding: 56px 16px 0;
+    padding: 96px 16px 0;
   }
 }

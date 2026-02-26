@@ -22,12 +22,12 @@
 
 .dev {
   background: #d97706;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .staging {
   background: var(--accent, #5c46c2);
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .close {

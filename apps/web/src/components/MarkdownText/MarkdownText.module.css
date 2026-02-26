@@ -10,7 +10,7 @@
 .markdown :global(code) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 0.92em;
-  background: var(--bg-elevated);
+  background: var(--bg-overlay);
   border-radius: 2px;
   padding: 0.05em 0.25em;
 }
@@ -18,7 +18,7 @@
 .markdown :global(pre) {
   margin: 0.6em 0;
   padding: 0.7em;
-  background: var(--bg-elevated);
+  background: var(--bg-overlay);
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
   overflow-x: auto;

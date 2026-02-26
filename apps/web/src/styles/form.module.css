@@ -17,7 +17,7 @@
 .input {
   padding: 8px 10px;
   font-size: var(--font-base);
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-base);
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
   color: var(--text-primary);
@@ -31,7 +31,7 @@
 .textarea {
   padding: 8px 10px;
   font-size: var(--font-base);
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-base);
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
   color: var(--text-primary);
@@ -70,7 +70,7 @@
 }
 
 .submitBtn {
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-base);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
 }
@@ -92,7 +92,7 @@
 .handleWrapper {
   display: flex;
   align-items: center;
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-base);
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
 }
@@ -131,4 +131,3 @@
 .handleHint[data-status="invalid"] {
   color: var(--error);
 }
-

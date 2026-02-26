@@ -13,6 +13,7 @@ import { IS_MOBILE } from '../../lib/platform';
 import { normalizeLegacyPagesForSingleCanvas } from '../../lib/singleCanvas';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
+import useReadingSize from '../../hooks/useReadingSize';
 import useFocusMode from './useFocusMode';
 import useHighlights, { getDocFlatText, flatOffsetToPos } from './useHighlights';
 import useInlineLink from './useInlineLink';
@@ -24,6 +25,7 @@ import ProjectSwitcher from './ProjectSwitcher';
 import ShareButton from './ShareButton';
 import UserMenu from './UserMenu';
 import SignupToast from '../../components/SignupToast/SignupToast';
+import QASimulatorModal from '../../components/QASimulatorModal/QASimulatorModal';
 import styles from './FocusPage.module.css';
 
 function looksLikeMarkdown(text) {
@@ -40,7 +42,8 @@ export default function FocusPage() {
   const { projectId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
-  const { language, toggleLanguage, t } = useLanguage();
+  const { t } = useLanguage();
+  const { isLargeReading, toggleReadingSize } = useReadingSize();
   const aiEnabled = import.meta.env.VITE_AI_ENABLED !== 'false';
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSubtitle, setProjectSubtitle] = useState('');
@@ -70,6 +73,7 @@ export default function FocusPage() {
   const shortcutsRef = useRef(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [qaOpen, setQaOpen] = useState(false);
   const [postCopied, setPostCopied] = useState(false);
   const actionsRef = useRef(null);
   const [wordCount, setWordCount] = useState(0);
@@ -592,9 +596,6 @@ export default function FocusPage() {
   }, [editor]);
 
   const wordLabel = wordCount === 1 ? t('focusPage.word') : t('focusPage.words');
-  const nextLanguageCode = language === 'es' ? 'EN' : 'ES';
-  const nextLanguageName = language === 'es' ? t('focusPage.english') : t('focusPage.spanish');
-
   return (
     <div className={styles.page}>
       {/* Settings bar */}
@@ -621,6 +622,24 @@ export default function FocusPage() {
             <span className={styles.wordCount}>
               {wordCount} {wordLabel}
             </span>
+            {isLoggedIn && projectId && aiEnabled && (
+              <button
+                className={styles.langBtn}
+                onClick={() => setQaOpen(true)}
+                title="Q&A Simulation"
+                aria-label="Abrir Q&A Simulation"
+              >
+                Q&amp;A
+              </button>
+            )}
+            <button
+              className={styles.langBtn}
+              onClick={toggleReadingSize}
+              title={isLargeReading ? 'Cambiar a letra pequeña' : 'Cambiar a letra grande'}
+              aria-label={isLargeReading ? 'Cambiar a letra pequeña' : 'Cambiar a letra grande'}
+            >
+              {isLargeReading ? 'A-' : 'A+'}
+            </button>
             {isLoggedIn && projectId && (
               <ShareButton
                 projectId={projectId}
@@ -675,14 +694,6 @@ export default function FocusPage() {
                 </div>
               )}
             </div>
-            <button
-              className={styles.langBtn}
-              onClick={toggleLanguage}
-              title={t('focusPage.languageSwitchTitle')}
-              aria-label={t('focusPage.languageMenuItem', { next: nextLanguageName })}
-            >
-              {nextLanguageCode}
-            </button>
             {/* Mobile actions menu */}
             <div className={styles.actionsWrap} ref={actionsRef}>
               <button
@@ -704,6 +715,22 @@ export default function FocusPage() {
                     </svg>
                     {wordCount} {wordLabel}
                   </div>
+                  {isLoggedIn && projectId && aiEnabled && (
+                    <button
+                      className={styles.actionsMenuItem}
+                      onClick={() => {
+                        setQaOpen(true);
+                        setActionsOpen(false);
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8 13.5C11.038 13.5 13.5 11.038 13.5 8S11.038 2.5 8 2.5 2.5 4.962 2.5 8 4.962 13.5 8 13.5Z" />
+                        <path d="M5.75 6.25h.01M10.25 6.25h.01" />
+                        <path d="M5.5 9.75c.8-.65 1.64-.98 2.5-.98.86 0 1.7.33 2.5.98" />
+                      </svg>
+                      Q&amp;A Simulation
+                    </button>
+                  )}
                   {isLoggedIn && projectId && (
                     <button
                       className={styles.actionsMenuItem}
@@ -720,20 +747,6 @@ export default function FocusPage() {
                       {t('focusPage.sharePost')}
                     </button>
                   )}
-                  <button
-                    className={styles.actionsMenuItem}
-                    onClick={() => {
-                      toggleLanguage();
-                      setActionsOpen(false);
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M8 1.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 0 0 0-13Z" />
-                      <path d="M1.8 8h12.4" />
-                      <path d="M8 1.8c1.6 1.4 2.6 3.7 2.6 6.2S9.6 12.8 8 14.2c-1.6-1.4-2.6-3.7-2.6-6.2S6.4 3.2 8 1.8Z" />
-                    </svg>
-                    {t('focusPage.languageMenuItem', { next: nextLanguageName })}
-                  </button>
                   <button
                     className={styles.actionsMenuItem}
                     onClick={handleCopyPost}
@@ -835,6 +848,14 @@ export default function FocusPage() {
           />
         </Sentry.ErrorBoundary>
       ) : null}
+
+      <QASimulatorModal
+        open={qaOpen}
+        onClose={() => setQaOpen(false)}
+        projectId={projectId}
+        session={session}
+        isOffline={isOffline}
+      />
 
       <SignupToast wordCount={wordCount} isLoggedIn={isLoggedIn} />
     </div>

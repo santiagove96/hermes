@@ -1,0 +1,230 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 76%, transparent);
+  backdrop-filter: blur(6px);
+  z-index: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  width: min(760px, 100%);
+  max-height: min(78vh, 760px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.headerTitle {
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-body-size);
+  line-height: var(--type-ui-body-line);
+  color: var(--text-primary);
+  font-weight: var(--weight-semi);
+}
+
+.headerMeta {
+  margin-left: 8px;
+  color: var(--text-dim);
+  font-size: var(--type-ui-caption-size);
+}
+
+.headerLeft {
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ghostBtn,
+.closeBtn,
+.sendBtn,
+.restartBtn {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-body-size);
+  line-height: var(--type-ui-body-line);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.ghostBtn:hover,
+.closeBtn:hover,
+.sendBtn:hover,
+.restartBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--neutral-hover-border);
+}
+
+.closeBtn {
+  line-height: 1;
+  padding: 6px 9px;
+}
+
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-base);
+}
+
+.msgRow {
+  display: flex;
+}
+
+.msgAssistant {
+  justify-content: flex-start;
+}
+
+.msgUser {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: min(88%, 620px);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  padding: 10px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-body-size);
+  line-height: var(--type-ui-body-line);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.msgAssistant .bubble {
+  background: var(--bg-surface);
+}
+
+.msgUser .bubble {
+  background: var(--bg-overlay);
+}
+
+.systemNote {
+  color: var(--text-dim);
+  font-size: var(--type-ui-caption-size);
+  line-height: 1.4;
+  text-align: center;
+  padding: 6px 8px;
+}
+
+.footer {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--type-ui-body-size);
+  line-height: var(--type-ui-body-line);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--border-accent);
+}
+
+.input::placeholder {
+  color: var(--text-dim);
+}
+
+.sendBtn {
+  min-width: 86px;
+}
+
+.sendBtn:disabled,
+.restartBtn:disabled,
+.ghostBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.status {
+  color: var(--text-dim);
+  font-size: var(--type-ui-caption-size);
+}
+
+.error {
+  color: var(--danger);
+  font-size: var(--type-ui-caption-size);
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: 8px;
+    align-items: stretch;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 100%;
+    border-radius: 10px;
+  }
+
+  .header {
+    padding: 10px 12px;
+  }
+
+  .messages {
+    padding: 10px;
+  }
+
+  .bubble {
+    max-width: 94%;
+  }
+
+  .inputRow {
+    gap: 6px;
+  }
+}

@@ -3,8 +3,34 @@ import { supabase } from '../lib/supabase.js';
 import logger from '../lib/logger.js';
 import { FREE_DAILY_LIMIT, PRO_MONTHLY_LIMIT, TRIAL_MONTHLY_LIMIT } from '../lib/limits.js';
 
+const UNLIMITED_EMAILS = new Set([
+  'santiventura@gmail.com',
+  ...((process.env.UNLIMITED_USAGE_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)),
+]);
+
 export async function checkMessageLimit(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
+  const userEmail = req.user?.email?.toLowerCase();
+
+  // Local/admin bypass: unlimited usage for selected emails.
+  // We still attach usageInfo so downstream routes/UI behave like a Pro user.
+  if (userEmail && UNLIMITED_EMAILS.has(userEmail)) {
+    req.usageInfo = {
+      plan: 'pro',
+      used: 0,
+      limit: 999_999_999,
+      remaining: 999_999_999,
+      subscriptionStatus: 'active',
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: null,
+      isTrial: false,
+      trialExpiresAt: null,
+    };
+    return next();
+  }
 
   try {
     // Fetch user profile

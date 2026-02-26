@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import assistantRouter from './routes/assistant.js';
+import qaSimulatorRouter from './routes/qa-simulator.js';
 import authRouter from './routes/auth.js';
 import stripeRouter from './routes/stripe.js';
 import usageRouter from './routes/usage.js';
@@ -112,6 +113,7 @@ const assistantLimiter = rateLimit({
 
 app.use('/api/auth', rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false }), authRouter);
 app.use('/api/assistant', assistantLimiter, assistantRouter);
+app.use('/api/qa-simulator', assistantLimiter, qaSimulatorRouter);
 app.use('/api/stripe', stripeRouter);
 app.use('/api/usage', rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false }), usageRouter);
 app.use('/api/mcp', rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false }), mcpRouter);

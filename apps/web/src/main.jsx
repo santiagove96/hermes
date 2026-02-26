@@ -8,6 +8,7 @@ import App from './App.jsx'
 import './lib/supabase'
 import AuthProvider from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { ReadingSizeProvider } from './contexts/ReadingSizeContext'
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -55,9 +56,11 @@ createRoot(document.getElementById('root')).render(
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
       <BrowserRouter>
         <LanguageProvider>
-          <AuthProvider>
-              <App />
-          </AuthProvider>
+          <ReadingSizeProvider>
+            <AuthProvider>
+                <App />
+            </AuthProvider>
+          </ReadingSizeProvider>
         </LanguageProvider>
       </BrowserRouter>
     </Sentry.ErrorBoundary>

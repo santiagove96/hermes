@@ -98,9 +98,9 @@ function RedirectToLatestProject() {
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ width: '40%', height: 24, background: 'var(--bg-hover)', borderRadius: 4 }} />
-        <div style={{ width: '80%', height: 14, background: 'var(--bg-hover)', borderRadius: 4 }} />
-        <div style={{ width: '60%', height: 14, background: 'var(--bg-hover)', borderRadius: 4 }} />
+        <div style={{ width: '40%', height: 24, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+        <div style={{ width: '80%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+        <div style={{ width: '60%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
       </div>
     </main>
   );
@@ -113,9 +113,9 @@ export default function App() {
       <Suspense fallback={
         <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
           <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ width: '40%', height: 24, background: 'var(--bg-hover)', borderRadius: 4 }} />
-            <div style={{ width: '80%', height: 14, background: 'var(--bg-hover)', borderRadius: 4 }} />
-            <div style={{ width: '60%', height: 14, background: 'var(--bg-hover)', borderRadius: 4 }} />
+            <div style={{ width: '40%', height: 24, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+            <div style={{ width: '80%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+            <div style={{ width: '60%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
           </div>
         </main>
       }>
@@ -137,7 +137,7 @@ export default function App() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: 'var(--bg-elevated)',
+            background: 'var(--bg-overlay)',
             color: 'var(--text-primary)',
             border: '1px solid var(--border-subtle)',
             fontSize: 'var(--font-sm)',

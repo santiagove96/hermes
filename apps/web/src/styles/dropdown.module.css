@@ -2,7 +2,7 @@
 
 .menu {
   position: absolute;
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-overlay);
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
   z-index: 200;

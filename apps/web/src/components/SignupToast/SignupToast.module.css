@@ -7,10 +7,10 @@
   align-items: center;
   gap: 8px;
   padding: 12px 10px 12px 16px;
-  background: var(--bg-elevated);
+  background: var(--bg-overlay);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px var(--underline-subtle);
   z-index: 100;
   animation: slideUp 0.5s ease-out 0.3s both;
   max-width: calc(100% - 32px);
@@ -24,7 +24,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(to right, #e07a5f 20%, #e0a05f 20% 40%, #6b9e7a 40% 60%, #5f8fc9 60% 80%, #9a7ec8 80%);
+  background: linear-gradient(to right, #e07a5f 20%, #e0a05f 20% 40%, var(--success) 40% 60%, #5f8fc9 60% 80%, #9a7ec8 80%);
 }
 
 .link {

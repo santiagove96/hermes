@@ -5,19 +5,19 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #eae8e2;
+  background: var(--bg-base);
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   z-index: 200;
   transition: box-shadow 0.15s ease;
 }
 
 .fab:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--underline-subtle);
 }
 
 .card {
@@ -26,13 +26,13 @@
   left: 24px;
   width: 360px;
   max-height: 480px;
-  background: var(--bg-base);
+  background: var(--bg-surface);
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-lg);
   z-index: 200;
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
 }
 
 .header {
@@ -40,7 +40,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -48,19 +48,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .headerLabel {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .minimizeBtn {
   background: none;
   border: none;
-  color: #999;
+  color: var(--text-dim);
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
@@ -70,7 +70,7 @@
 }
 
 .minimizeBtn:hover {
-  color: #555;
+  color: var(--text-dim);
 }
 
 .messages {
@@ -97,42 +97,42 @@
   font-size: 14px;
   line-height: 1.5;
   max-width: 85%;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .msgUser .msgText {
-  background: #eae8e2;
+  background: var(--bg-overlay);
   border-radius: 10px;
   padding: 8px 12px;
 }
 
 .inputArea {
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border-subtle);
   padding: 12px 16px;
   flex-shrink: 0;
 }
 
 .usageCounter {
   font-size: 11px;
-  color: #999;
+  color: var(--text-dim);
   margin-bottom: 6px;
 }
 
 .inputField {
   width: 100%;
-  background: #eae8e2;
+  background: var(--bg-base);
   border: none;
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  color: #1a1a1a;
+  color: var(--text-primary);
   outline: none;
   box-sizing: border-box;
 }
 
 .inputField::placeholder {
-  color: #999;
+  color: var(--text-dim);
 }
 
 .inputField:disabled {
@@ -149,12 +149,12 @@
 
 .loginText {
   font-size: 14px;
-  color: #999;
+  color: var(--text-dim);
   margin: 0;
 }
 
 .loginLink {
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -162,7 +162,7 @@
 
 .loadingText {
   font-size: 13px;
-  color: #999;
+  color: var(--text-dim);
   text-align: center;
   padding: 20px 0;
 }
@@ -176,19 +176,21 @@
 
 .skeletonLine {
   height: 12px;
-  background: var(--bg-hover);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+  opacity: 1;
 }
 
 @keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(0.97); }
 }
 
 .emptyState {
   font-size: 14px;
-  color: #999;
+  color: var(--text-dim);
   text-align: center;
   padding: 20px 0;
 }
@@ -204,7 +206,7 @@
   background: none;
   border: none;
   font-size: 12px;
-  color: #999;
+  color: var(--text-dim);
   cursor: pointer;
   padding: 2px 0;
   display: inline-flex;
@@ -214,7 +216,7 @@
 }
 
 .sourcesToggle:hover {
-  color: #666;
+  color: var(--text-muted);
 }
 
 .sourcesChevron {
@@ -240,7 +242,7 @@
 }
 
 .sourcesList a:hover {
-  color: var(--text-primary, #1a1a1a);
+  color: var(--text-primary, var(--surface-inverse));
 }
 
 /* Tool status indicator */
@@ -248,7 +250,7 @@
 .toolStatusIndicator {
   font-size: 12px;
   font-style: italic;
-  color: #999;
+  color: var(--text-dim);
   padding: 4px 0;
   animation: pulse 1.5s ease-in-out infinite;
 }

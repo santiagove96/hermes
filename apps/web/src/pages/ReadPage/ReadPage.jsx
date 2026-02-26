@@ -10,6 +10,17 @@ function formatDate(isoDate) {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function hasRenderableEssayData(data) {
+  if (!data) return false;
+  const content = getSingleCanvasPublishedContent(data.pages, data.publishedTabs);
+  return Boolean(
+    (data.title || '').trim()
+    || (data.subtitle || '').trim()
+    || (data.authorName || '').trim()
+    || (content || '').trim(),
+  );
+}
+
 export default function ReadPage() {
   const { shortId, slug } = useParams();
   const navigate = useNavigate();
@@ -20,10 +31,18 @@ export default function ReadPage() {
     if (!shortId) return;
 
     let cancelled = false;
+    let retryTimer;
 
-    fetchPublishedEssay(shortId)
-      .then((data) => {
+    // Keep skeleton visible until we get a stable payload for this article.
+    // This avoids flashing an empty article shell on refresh.
+    setLoading(true);
+    setEssay(null);
+
+    const loadEssay = async (attempt = 0) => {
+      try {
+        const data = await fetchPublishedEssay(shortId);
         if (cancelled) return;
+
         if (!data) {
           setEssay(null);
           setLoading(false);
@@ -36,20 +55,49 @@ export default function ReadPage() {
           return;
         }
 
+        const hasVisibleData = hasRenderableEssayData(data);
+
+        // Some refreshes briefly return an empty payload; retry instead of flashing empties.
+        if (!hasVisibleData && attempt < 5) {
+          retryTimer = window.setTimeout(() => {
+            loadEssay(attempt + 1);
+          }, 220);
+          return;
+        }
+
         setEssay(data);
         setLoading(false);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
           setEssay(null);
           setLoading(false);
         }
-      });
+      }
+    };
 
-    return () => { cancelled = true; };
+    loadEssay();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) window.clearTimeout(retryTimer);
+    };
   }, [shortId, slug, navigate]);
 
   if (loading) {
+    return (
+      <div className={styles.centered}>
+        <div className={styles.skeleton}>
+          <div className={styles.skeletonLine} style={{ width: '60%', height: '24px' }} />
+          <div className={styles.skeletonLine} style={{ width: '40%', height: '14px' }} />
+          <div className={styles.skeletonLine} style={{ width: '100%', height: '14px' }} />
+          <div className={styles.skeletonLine} style={{ width: '90%', height: '14px' }} />
+          <div className={styles.skeletonLine} style={{ width: '75%', height: '14px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (essay && !hasRenderableEssayData(essay)) {
     return (
       <div className={styles.centered}>
         <div className={styles.skeleton}>

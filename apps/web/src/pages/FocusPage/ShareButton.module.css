@@ -7,28 +7,28 @@
   align-items: center;
   justify-content: center;
   background: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: 4px 6px;
-  color: #999;
+  color: var(--text-dim);
   cursor: pointer;
   line-height: 0;
   transition: color 150ms ease, border-color 150ms ease;
 }
 
 .trigger:hover {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  border-color: var(--neutral-hover-border);
 }
 
 .triggerPublished {
-  color: #6b9e7a;
-  border-color: rgba(107, 158, 122, 0.3);
+  color: var(--success);
+  border-color: var(--success-border);
 }
 
 .triggerPublished:hover {
-  color: #5a8a68;
-  border-color: rgba(107, 158, 122, 0.5);
+  color: var(--success-strong);
+  border-color: var(--success-border-strong);
 }
 
 .panel {
@@ -36,44 +36,46 @@
   top: calc(100% + 8px);
   right: 0;
   width: 300px;
-  background: var(--bg-base);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px var(--focus-ring-soft);
   padding: 16px;
   z-index: 300;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .heading {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: var(--type-ui-body-size);
+  font-weight: var(--weight-semi);
+  color: var(--text-primary);
   margin: 0 0 12px;
 }
 
 .label {
   display: block;
-  font-size: 12px;
-  color: #999;
+  font-size: var(--type-ui-meta-size);
+  line-height: var(--type-ui-meta-line);
+  color: var(--text-dim);
   margin-bottom: 4px;
 }
 
 .input {
   width: 100%;
   padding: 6px 8px;
-  font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: var(--type-ui-input-size);
+  line-height: var(--type-ui-input-line);
+  font-family: var(--font-ui);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
-  background: #fff;
-  color: #1a1a1a;
+  background: var(--bg-base);
+  color: var(--text-primary);
   outline: none;
   box-sizing: border-box;
 }
 
 .input:focus {
-  border-color: rgba(0, 0, 0, 0.25);
+  border-color: var(--border-accent);
 }
 
 .field {
@@ -90,13 +92,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: #666;
+  font-size: var(--type-ui-body-size);
+  line-height: var(--type-ui-body-line);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
 .tabCheck input[type="checkbox"] {
-  accent-color: #1a1a1a;
+  accent-color: var(--text-primary);
 }
 
 .tabDot {
@@ -111,11 +114,11 @@
   display: block;
   width: 100%;
   padding: 8px;
-  font-size: 13px;
+  font-size: var(--type-ui-body-size);
   font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #fff;
-  background: #1a1a1a;
+  font-family: var(--font-ui);
+  color: var(--text-inverse);
+  background: var(--surface-inverse);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -124,17 +127,17 @@
 }
 
 .publishBtn:hover {
-  background: #333;
+  background: var(--surface-inverse-hover);
 }
 
 .publishBtn:disabled {
-  background: #ccc;
+  background: var(--surface-disabled);
   cursor: default;
 }
 
 .note {
-  font-size: 11px;
-  color: #bbb;
+  font-size: var(--type-ui-caption-size);
+  color: var(--text-dim);
   margin-top: 8px;
   text-align: center;
 }
@@ -149,12 +152,12 @@
 .urlDisplay {
   flex: 1;
   padding: 6px 8px;
-  font-size: 12px;
-  font-family: 'SF Mono', 'Menlo', monospace;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: var(--type-ui-meta-size);
+  font-family: var(--font-code);
+  background: var(--hover-soft);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
-  color: #666;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -162,11 +165,11 @@
 
 .copyBtn {
   padding: 6px 10px;
-  font-size: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #666;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: var(--type-ui-meta-size);
+  font-family: var(--font-ui);
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
@@ -174,33 +177,33 @@
 }
 
 .copyBtn:hover {
-  color: #1a1a1a;
-  border-color: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
 }
 
 .openLink {
   display: inline-block;
-  font-size: 12px;
-  color: #999;
+  font-size: var(--type-ui-meta-size);
+  color: var(--text-dim);
   text-decoration: underline;
-  text-decoration-color: rgba(0, 0, 0, 0.15);
+  text-decoration-color: var(--underline-subtle);
   text-underline-offset: 2px;
   margin-bottom: 12px;
 }
 
 .openLink:hover {
-  color: #666;
+  color: var(--text-muted);
 }
 
 .updateBtn {
   display: block;
   width: 100%;
   padding: 8px;
-  font-size: 13px;
+  font-size: var(--type-ui-body-size);
   font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #fff;
-  background: #1a1a1a;
+  font-family: var(--font-ui);
+  color: var(--text-inverse);
+  background: var(--surface-inverse);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -209,17 +212,17 @@
 }
 
 .updateBtn:hover {
-  background: #333;
+  background: var(--surface-inverse-hover);
 }
 
 .updateBtn:disabled {
-  background: #ccc;
+  background: var(--surface-disabled);
   cursor: default;
 }
 
 .updateNote {
-  font-size: 11px;
-  color: #6b9e7a;
+  font-size: var(--type-ui-caption-size);
+  color: var(--success);
   margin-top: 6px;
   text-align: center;
 }
@@ -228,9 +231,9 @@
   display: block;
   width: 100%;
   padding: 8px;
-  font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #c44;
+  font-size: var(--type-ui-body-size);
+  font-family: var(--font-ui);
+  color: var(--danger-alt);
   background: none;
   border: 1px solid rgba(204, 68, 68, 0.2);
   border-radius: 4px;
@@ -240,20 +243,20 @@
 }
 
 .unpublishBtn:hover {
-  background: rgba(204, 68, 68, 0.05);
-  border-color: rgba(204, 68, 68, 0.35);
+  background: var(--danger-bg-soft);
+  border-color: var(--danger-border-strong);
 }
 
 .warning {
-  font-size: 11px;
-  color: #c44;
+  font-size: var(--type-ui-caption-size);
+  color: var(--danger-alt);
   margin-top: 6px;
   text-align: center;
 }
 
 .separator {
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border-subtle);
   margin: 12px 0;
 }
 

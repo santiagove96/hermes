@@ -158,13 +158,7 @@ const MESSAGES = {
 };
 
 function getInitialLanguage() {
-  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    return SUPPORTED_LANGUAGES.includes(stored) ? stored : DEFAULT_LANGUAGE;
-  } catch {
-    return DEFAULT_LANGUAGE;
-  }
+  return DEFAULT_LANGUAGE;
 }
 
 function getMessage(messages, path) {

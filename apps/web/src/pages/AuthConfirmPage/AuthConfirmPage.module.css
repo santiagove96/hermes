@@ -37,7 +37,7 @@
   margin-top: 16px;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  background: var(--bg-elevated);
+  background: var(--bg-overlay);
   color: var(--text-primary);
   padding: 10px 14px;
   font-size: var(--font-sm);

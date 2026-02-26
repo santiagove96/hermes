@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,GRAD,wdth,wght@8..144,-50..100,50..150,100..900&display=swap');
+
 @font-face {
   font-family: 'Diless Helvetica Neue';
   src: url('./assets/fonts/HelveticaNeue-Roman.otf') format('opentype');
@@ -41,77 +43,182 @@
 
 /* ===== LIGHT THEME (default) ===== */
 :root {
-  --bg-base: #f5f5f0;
-  --bg-surface: #f8f7fa;
-  --bg-elevated: #ffffff;
-  --bg-hover: #e8e6ec;
-  --text-primary: #1a1a2e;
-  --text-muted: #6b5b7b;
-  --text-dim: #9a8aab;
-  --accent: #5c46c2;
-  --border-accent: #403864;
-  --hermes-accent: #acc246;
-  --hermes-border: #5c6438;
-  --border-subtle: rgba(0, 0, 0, 0.10);
-  --blue: #3d46c2;
+  --bg-base: #f5f3f0;
+  --bg-surface: #fcfaf7;
+  --bg-overlay: #edebe8;
+  --bg-hover: #ffffff;
+  --text-primary: #28241f;
+  --text-muted: rgba(40, 36, 31, 0.8);
+  --text-dim: rgba(40, 36, 31, 0.64);
+  --accent-primary: #5c46c2;
+  --accent: var(--accent-primary);
+  --border-accent: rgba(40, 36, 31, 0.24);
+  --brand-accent: #acc246;
+  --brand-border: #5c6438;
+  --border-subtle: rgba(40, 36, 31, 0.12);
   --error: #e85454;
   --error-bg: rgba(232, 84, 84, 0.1);
-  --badge-bg: #d4c9a8;
-  --mode-sparring: #e06c75;
-  --mode-sympathetic: #c695c6;
-  --mode-creative: #e5c07b;
-  --mode-strategic: #61afef;
-  --content-padding: 65px;
-  --content-padding-bottom: 60px;
-  --font-sans: Arial, Helvetica, sans-serif;
+
+  /* Transitional utility tokens (created while replacing repeated hardcoded values).
+     Keep these centralized for now; later we can merge/remove them once semantics are unified. */
+  --text-inverse: rgba(255, 255, 255, 0.94);
+  --surface-inverse: #1a1a1a;
+  --surface-inverse-hover: #333;
+  --surface-disabled: #ccc;
+  --content-rule: #d0cdc5;
+  --content-placeholder: #c0bdb5;
+  --code-inline-bg: rgba(0, 0, 0, 0.05);
+  --hover-soft: rgba(0, 0, 0, 0.04);
+  --hover-medium: rgba(0, 0, 0, 0.06);
+  --focus-ring-soft: rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --underline-subtle: rgba(0, 0, 0, 0.15);
+  --underline-default: rgba(0, 0, 0, 0.3);
+  --underline-strong: rgba(0, 0, 0, 0.6);
+  --neutral-hover-border: rgba(0, 0, 0, 0.2);
+  --success: #6b9e7a;
+  --success-strong: #5a8a68;
+  --success-border: rgba(107, 158, 122, 0.3);
+  --success-border-strong: rgba(107, 158, 122, 0.5);
+  --danger: #d32f2f;
+  --danger-alt: #c44;
+  --danger-bg: rgba(211, 47, 47, 0.06);
+  --danger-border: rgba(211, 47, 47, 0.2);
+  --danger-border-strong: rgba(204, 68, 68, 0.35);
+  --danger-bg-soft: rgba(204, 68, 68, 0.05);
+  --success-ui: #2e7d32;
+  --warning: #b45309;
+  --warning-bg: rgba(180, 83, 9, 0.1);
+  --font-sans: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-ui: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-reading: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-xs: 11px;
-  --font-sm: 13px;
-  --font-base: 15px;
+  --font-serif: 'Roboto Serif', Georgia, serif;
+  --font-code: 'SF Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-base: 16px;
   --font-lg: 18px;
-  --font-xl: 24px;
+  --font-xl: 20px;
   --weight-normal: 400;
   --weight-semi: 600;
   --weight-bold: 700;
+
+  /* Typography rhythm */
+  --lh-ui: 1.4;
+  --tracking-label: 0.04em;
+  --tracking-caps: 0.5px;
+
+  /* Semantic typography tokens (mono labels / uppercase panels) */
+  --type-mono-xs-family: var(--font-code);
+  --type-mono-xs-size: 11px;
+  --type-mono-xs-line: 16px;
+  --type-mono-xs-weight: 600;
+  --type-mono-xs-tracking: 0.4px;
+
+  /* Semantic typography tokens (UI) */
+  --type-ui-caption-size: 12px;
+  --type-ui-caption-weight: 400;
+
+  --type-ui-meta-size: 14px;
+  --type-ui-meta-line: 20px;
+
+  --type-ui-body-size: 14px;
+  --type-ui-body-line: 20px;
+
+  --type-ui-input-size: 14px;
+  --type-ui-input-line: 20px;
+
+  --type-ui-subtitle-size: 16px;
+  --type-ui-subtitle-weight: 400;
+  --type-ui-subtitle-line: 22px;
+
+  --type-ui-title-family: var(--font-serif);
+  --type-ui-title-size: 32px;
+  --type-ui-title-weight: 560;
+  --type-ui-title-line: 36px;
+  --type-ui-title-serif-grad: -40;
+  --type-ui-title-serif-wdth: 54;
+  --type-ui-title-serif-opsz: 88;
+
+  /* Semantic typography tokens (reading/editor) */
+  --type-reading-body-size: 16px;
+  --type-reading-body-line: 26px;
+  --type-reading-body-tracking: 0px;
+
+  --type-reading-page-title-family: var(--font-serif);
+  --type-reading-page-title-size: 32px;
+  --type-reading-page-title-weight: 560;
+  --type-reading-page-title-line: 36px;
+  --type-reading-page-title-serif-grad: -40;
+  --type-reading-page-title-serif-wdth: 54;
+  --type-reading-page-title-serif-opsz: 88;
+
+  --type-reading-h1-family: var(--font-serif);
+  --type-reading-h1-size: 24px;
+  --type-reading-h1-weight: 560;
+  --type-reading-h1-line: 28px;
+  --type-reading-h1-serif-grad: -40;
+  --type-reading-h1-serif-wdth: 54;
+  --type-reading-h1-serif-opsz: 88;
+
+  --type-reading-h2-family: var(--font-serif);
+  --type-reading-h2-size: 20px;
+  --type-reading-h2-weight: 560;
+  --type-reading-h2-line: 24px;
+  --type-reading-h2-serif-grad: -40;
+  --type-reading-h2-serif-wdth: 54;
+  --type-reading-h2-serif-opsz: 88;
+
+  --type-reading-h3-family: var(--font-serif);
+  --type-reading-h3-size: 18px;
+  --type-reading-h3-weight: 560;
+  --type-reading-h3-line: 24px;
+  --type-reading-h3-serif-grad: -40;
+  --type-reading-h3-serif-wdth: 54;
+  --type-reading-h3-serif-opsz: 88;
+
+  /* Semantic typography tokens (code) */
+  --type-code-inline-size: 0.9em;
+  --type-code-block-size: 14px;
 }
 
-@media (max-width: 900px) {
-  :root {
-    --content-padding: 15px;
-    --content-padding-bottom: 40px;
-  }
+:root[data-reading-size="large"] {
+  --type-reading-body-size: 18px;
+  --type-reading-body-line: 28px;
 }
 
 /* ===== DUSK THEME ===== */
 :root[data-theme="dusk"] {
   --bg-base: #16171e;
-  --bg-surface: #191b24;
-  --bg-elevated: #1e1f28;
-  --bg-hover: #2a2833;
+  --bg-surface: #1d1f29;
+  --bg-overlay: #242632;
+  --bg-hover: #2b2d3a;
   --text-primary: #ebebeb;
   --text-muted: #a898b3;
   --text-dim: #7a7085;
-  --accent: #cc76a9;
+  --accent-primary: #cc76a9;
+  --accent: var(--accent-primary);
   --border-accent: #754967;
-  --hermes-accent: #76cc99;
-  --hermes-border: #497566;
+  --brand-accent: #76cc99;
+  --brand-border: #497566;
   --border-subtle: rgba(235, 235, 235, 0.12);
-  --badge-bg: #4a3a2a;
 }
 
 /* ===== DAWN THEME (warm amber dark) ===== */
 :root[data-theme="dawn"] {
   --bg-base: #1e1a16;
-  --bg-surface: #24201a;
-  --bg-elevated: #2a261e;
+  --bg-surface: #252019;
+  --bg-overlay: #2d271f;
   --bg-hover: #38322a;
   --text-primary: #ebebde;
   --text-muted: #b3a898;
   --text-dim: #857a6a;
-  --accent: #cc9a76;
+  --accent-primary: #cc9a76;
+  --accent: var(--accent-primary);
   --border-accent: #755c49;
-  --hermes-accent: #76a9cc;
-  --hermes-border: #496275;
+  --brand-accent: #76a9cc;
+  --brand-border: #496275;
   --border-subtle: rgba(235, 230, 220, 0.12);
 }
 
@@ -150,4 +257,28 @@ ul, ol {
 img {
   display: block;
   max-width: 100%;
+}
+
+/* Global scrollbar (article + chat + panels): track uses bg-base */
+* {
+  scrollbar-color: var(--text-dim) var(--bg-base);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--bg-overlay);
+  border: 2px solid var(--bg-base);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-hover);
 }
