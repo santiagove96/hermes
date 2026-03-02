@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getPlatform } from '@hermes/api';
+import OverlayModal from '../OverlayModal/OverlayModal';
+import DotGridLoader from '../DotGridLoader/DotGridLoader';
 import styles from './QASimulatorModal.module.css';
 
 const MarkdownText = lazy(() => import('../MarkdownText/MarkdownText'));
@@ -56,16 +58,16 @@ export default function QASimulatorModal({ open, onClose, projectId, session, is
   const [errorText, setErrorText] = useState('');
   const abortRef = useRef(null);
   const endRef = useRef(null);
-  const initializedRef = useRef(false);
-
   const isLoggedIn = !!session;
   const isComplete = !!sessionState.completed;
+  const hasStarted = streaming || messages.length > 0 || sessionState.questionNumber > 0 || sessionState.answers.length > 0;
 
   const progressLabel = useMemo(() => {
-    if (sessionState.questionNumber === 0) return 'Preparando preguntas';
     if (isComplete) return 'Simulación completada';
+    if (!hasStarted) return 'Listo para comenzar';
+    if (sessionState.questionNumber === 0) return 'Preparando preguntas';
     return `Pregunta ${sessionState.questionNumber} de 5`;
-  }, [sessionState.questionNumber, isComplete]);
+  }, [sessionState.questionNumber, isComplete, hasStarted]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,7 +76,6 @@ export default function QASimulatorModal({ open, onClose, projectId, session, is
   const resetSession = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
-    initializedRef.current = false;
     setMessages([]);
     setInput('');
     setStreaming(false);
@@ -187,14 +188,8 @@ export default function QASimulatorModal({ open, onClose, projectId, session, is
   useEffect(() => {
     if (!open) {
       resetSession();
-      return;
     }
-    if (!isLoggedIn || !projectId || isOffline) return;
-    if (initializedRef.current) return;
-
-    initializedRef.current = true;
-    void sendTurn({ message: '', nextSessionState: { ...EMPTY_SESSION } });
-  }, [open, isLoggedIn, projectId, isOffline, sendTurn, resetSession]);
+  }, [open, resetSession]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -208,98 +203,95 @@ export default function QASimulatorModal({ open, onClose, projectId, session, is
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
     const text = input.trim();
-    if (!text || streaming || isComplete) return;
+    if (!text || streaming || isComplete || !hasStarted) return;
     setInput('');
     await sendTurn({ message: text, nextSessionState: sessionState });
   };
 
   const handleRestart = async () => {
     resetSession();
-    initializedRef.current = true;
     await sendTurn({ message: '', nextSessionState: { ...EMPTY_SESSION } });
   };
 
   if (!open) return null;
 
-  return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Q&A Simulation">
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerTitle}>
-              Q&amp;A Simulation
-              <span className={styles.headerMeta}> · {progressLabel}</span>
-            </div>
-          </div>
-          <div className={styles.headerActions}>
-            {isComplete && (
-              <button className={styles.restartBtn} onClick={handleRestart} disabled={streaming}>
-                Nueva simulación
-              </button>
-            )}
-            <button className={styles.closeBtn} onClick={onClose} aria-label="Cerrar simulación">
-              ×
-            </button>
-          </div>
-        </div>
+  const showComposer = hasStarted && !isComplete;
+  const footer = showComposer ? (
+    <>
+      {errorText ? <div className={styles.error}>{errorText}</div> : null}
+      <form className={styles.inputRow} onSubmit={handleSubmit}>
+        <input
+          className={styles.input}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={!isLoggedIn || isOffline || streaming || isComplete}
+          placeholder={
+            streaming
+              ? 'La simulación está respondiendo...'
+              : 'Escribe tu respuesta...'
+          }
+        />
+        <button className={styles.sendBtn} type="submit" disabled={!input.trim() || streaming || isComplete || !isLoggedIn || isOffline}>
+          Enviar
+        </button>
+      </form>
+    </>
+  ) : null;
 
-        <div className={styles.messages}>
+  return (
+    <OverlayModal
+      open={open}
+      onClose={onClose}
+      title="Q&A Simulation"
+      meta={progressLabel}
+      bodyClassName={styles.modalBody}
+      footer={footer}
+      footerClassName={styles.modalFooter}
+      closeLabel="Cerrar simulación"
+    >
+      <div className={styles.messages}>
           {!isLoggedIn ? (
             <div className={styles.systemNote}>Inicia sesión para usar la simulación de preguntas y respuestas.</div>
           ) : isOffline ? (
             <div className={styles.systemNote}>No disponible sin conexión.</div>
-          ) : messages.length === 0 && streaming ? (
-            <div className={styles.systemNote}>Generando preguntas de simulación...</div>
-          ) : (
-            messages.map((msg, idx) => (
-              <div key={idx} className={`${styles.msgRow} ${msg.role === 'assistant' ? styles.msgAssistant : styles.msgUser}`}>
-                <div className={styles.bubble}>
-                  {msg.role === 'assistant' ? (
-                    <Suspense fallback={<span>{msg.content}</span>}>
-                      <MarkdownText value={msg.content} />
-                    </Suspense>
-                  ) : (
-                    msg.content
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-          <div ref={endRef} />
-        </div>
-
-        <div className={styles.footer}>
-          {errorText ? <div className={styles.error}>{errorText}</div> : null}
-          <form className={styles.inputRow} onSubmit={handleSubmit}>
-            <input
-              className={styles.input}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={!isLoggedIn || isOffline || streaming || isComplete}
-              placeholder={
-                isComplete
-                  ? 'La simulación terminó. Puedes iniciar una nueva.'
-                  : streaming
-                    ? 'La simulación está respondiendo...'
-                    : 'Escribe tu respuesta...'
-              }
-            />
-            <button className={styles.sendBtn} type="submit" disabled={!input.trim() || streaming || isComplete || !isLoggedIn || isOffline}>
-              Enviar
-            </button>
-          </form>
-          <div className={styles.footerActions}>
-            <div className={styles.status}>
-              {sessionState.answers.length} respuestas enviadas
-            </div>
-            {!isComplete && (
-              <button className={styles.ghostBtn} onClick={handleRestart} disabled={streaming || !isLoggedIn || isOffline}>
+          ) : !hasStarted && !streaming ? (
+            <div className={styles.centerStage}>
+              <button className={styles.restartBtn} onClick={handleRestart} disabled={!isLoggedIn || isOffline}>
                 Nueva simulación
               </button>
-            )}
-          </div>
-        </div>
+              {errorText ? <div className={styles.error}>{errorText}</div> : null}
+            </div>
+          ) : messages.length === 0 && streaming ? (
+            <div className={styles.loadingState}>
+              <DotGridLoader />
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`${styles.msgRow} ${msg.role === 'assistant' ? styles.msgAssistant : styles.msgUser}`}>
+                  <div className={styles.bubble}>
+                    {msg.role === 'assistant' ? (
+                      <Suspense fallback={<span>{msg.content}</span>}>
+                        <MarkdownText value={msg.content} />
+                      </Suspense>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isComplete ? (
+                <div className={styles.centerStage}>
+                  <button className={styles.restartBtn} onClick={handleRestart} disabled={streaming || !isLoggedIn || isOffline}>
+                    Nueva simulación
+                  </button>
+                  {errorText ? <div className={styles.error}>{errorText}</div> : null}
+                </div>
+              ) : null}
+            </>
+          )}
+          <div ref={endRef} />
       </div>
-    </div>
+    </OverlayModal>
   );
 }

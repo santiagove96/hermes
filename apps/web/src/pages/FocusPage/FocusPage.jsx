@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react';
 import posthog from 'posthog-js';
+import toast from 'react-hot-toast';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import { Markdown } from '@tiptap/markdown';
 import { Slice } from '@tiptap/pm/model';
-import { fetchWritingProject, saveProjectPages, saveProjectHighlights, updateWritingProject, updatePublishSettings, generateSlug, fetchCurrentUsage } from '@hermes/api';
+import { CardsThree, ChatCircleDots, GlobeSimple, List, TextAlignLeft } from '@phosphor-icons/react';
+import { fetchWritingProject, HOME_SHORT_ID, saveProjectPagesWithOptions, saveProjectHighlights, updateWritingProject, updatePublishSettings, generateSlug, fetchCurrentUsage } from '@hermes/api';
 import { IS_MOBILE } from '../../lib/platform';
 import { normalizeLegacyPagesForSingleCanvas } from '../../lib/singleCanvas';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
-import useReadingSize from '../../hooks/useReadingSize';
 import useFocusMode from './useFocusMode';
 import useHighlights, { getDocFlatText, flatOffsetToPos } from './useHighlights';
 import useInlineLink from './useInlineLink';
@@ -24,8 +26,14 @@ import { EMPTY_PAGES } from './PageTabs';
 import ProjectSwitcher from './ProjectSwitcher';
 import ShareButton from './ShareButton';
 import UserMenu from './UserMenu';
+import AnalyzeMenu from '../../components/AnalyzeMenu/AnalyzeMenu';
 import SignupToast from '../../components/SignupToast/SignupToast';
 import QASimulatorModal from '../../components/QASimulatorModal/QASimulatorModal';
+import FlashcardsView from '../../components/FlashcardsView/FlashcardsView';
+import Button from '../../components/ui/Button';
+import Navbar from '../../components/ui/Navbar';
+import { shareSelectionStory } from '../../lib/shareSelection';
+import { getPlainTextFromBlocks, getShareBlocksFromEditorSelection } from '../../lib/shareSelectionBlocks';
 import styles from './FocusPage.module.css';
 
 function looksLikeMarkdown(text) {
@@ -38,12 +46,37 @@ function getWordCount(text) {
   return trimmed.split(/\s+/).length;
 }
 
+function autosizeTextarea(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+function isMobileSelectionSurface() {
+  const coarsePointer = window.matchMedia?.('(pointer: coarse)')?.matches;
+  const narrowViewport = window.matchMedia?.('(max-width: 900px)')?.matches;
+  return !!(coarsePointer || narrowViewport);
+}
+
+function getShareAuthorName(session, publishAuthorName) {
+  const published = String(publishAuthorName || '').trim();
+  if (published) return published;
+
+  const metadata = session?.user?.user_metadata || {};
+  const fallback =
+    metadata.full_name ||
+    metadata.name ||
+    session?.user?.email?.split('@')[0] ||
+    '';
+
+  return String(fallback).trim();
+}
+
 export default function FocusPage() {
   const { projectId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
   const { t } = useLanguage();
-  const { isLargeReading, toggleReadingSize } = useReadingSize();
   const aiEnabled = import.meta.env.VITE_AI_ENABLED !== 'false';
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSubtitle, setProjectSubtitle] = useState('');
@@ -69,18 +102,31 @@ export default function FocusPage() {
     };
   }, []);
   const [_dropdownOpen, setDropdownOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const shortcutsRef = useRef(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [qaOpen, setQaOpen] = useState(false);
+  const [flashcardsOpen, setFlashcardsOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeUsage, setAnalyzeUsage] = useState(null);
   const [postCopied, setPostCopied] = useState(false);
+  const [selectionMenu, setSelectionMenu] = useState({
+    visible: false,
+    left: 0,
+    top: 0,
+    isHighlighted: false,
+    selectedText: '',
+    selectedBlocks: [],
+  });
+  const [mobileSelectionOffset, setMobileSelectionOffset] = useState(12);
+  const selectionActionPressRef = useRef(false);
   const actionsRef = useRef(null);
   const [wordCount, setWordCount] = useState(0);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleEditValue, setTitleEditValue] = useState('');
   const [editingSubtitle, setEditingSubtitle] = useState(false);
   const [subtitleEditValue, setSubtitleEditValue] = useState('');
+  const titleInputRef = useRef(null);
+  const subtitleInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('coral');
   const [pages, setPages] = useState({ ...EMPTY_PAGES });
   const [initialLoaded, setInitialLoaded] = useState(false);
@@ -101,6 +147,8 @@ export default function FocusPage() {
   }, [activeTab]);
 
   const isLoggedIn = !!session;
+  const mobileSelectionUi = isMobileSelectionSurface();
+  const isHomeProject = publishState.shortId === HOME_SHORT_ID;
 
   // Title and publish state are now loaded from the single fetch in the content-loading effect below.
 
@@ -128,6 +176,7 @@ export default function FocusPage() {
     extensions: [
       StarterKit.configure({ link: false }),
       Markdown,
+      Highlight,
       Placeholder.configure({
         placeholder: t('focusPage.startWriting'),
       }),
@@ -187,16 +236,145 @@ export default function FocusPage() {
       if (isLoggedIn && projectId) {
         if (supabaseSaveTimerRef.current) clearTimeout(supabaseSaveTimerRef.current);
         supabaseSaveTimerRef.current = setTimeout(() => {
-          saveProjectPages(projectId, pagesRef.current).catch(() => {});
+          saveProjectPagesWithOptions(projectId, pagesRef.current, { syncPublished: isHomeProject }).catch(() => {});
         }, 2000);
       }
     },
   });
 
+  const updateSelectionMenu = useCallback(() => {
+    if (!editor) return;
+
+    const { from, to, empty } = editor.state.selection;
+    if (empty || from === to) {
+      setSelectionMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+      return;
+    }
+
+    const fromCoords = editor.view.coordsAtPos(from);
+    const toCoords = editor.view.coordsAtPos(to);
+    const menuWidth = 120;
+    const centerX = (fromCoords.left + toCoords.right) / 2;
+    const left = Math.max(16, Math.min(centerX - menuWidth / 2, window.innerWidth - menuWidth - 16));
+    const top = Math.max(64, Math.min(fromCoords.top - 52, window.innerHeight - 80));
+
+    const selectedBlocks = getShareBlocksFromEditorSelection(editor);
+    const selectedText = getPlainTextFromBlocks(selectedBlocks)
+      || editor.state.doc.textBetween(from, to, ' ', ' ').trim();
+    if (!selectedText) {
+      setSelectionMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+      return;
+    }
+
+    setSelectionMenu({
+      visible: true,
+      left,
+      top,
+      isHighlighted: editor.isActive('highlight'),
+      selectedText,
+      selectedBlocks,
+    });
+  }, [editor]);
+
+  const handleToggleManualHighlight = useCallback(() => {
+    selectionActionPressRef.current = false;
+    if (!editor) return;
+    if (editor.isActive('highlight')) {
+      editor.chain().focus().unsetHighlight().run();
+    } else {
+      editor.chain().focus().toggleHighlight().run();
+    }
+    setSelectionMenu((prev) => ({ ...prev, visible: false }));
+  }, [editor]);
+
+  const handleShareSelection = useCallback(async () => {
+    selectionActionPressRef.current = false;
+    const quote = (selectionMenu.selectedText || '').trim();
+    if (!quote) return;
+
+    const payload = {
+      quote,
+      blocks: selectionMenu.selectedBlocks,
+      title: projectTitle || 'Diless',
+      author: getShareAuthorName(session, publishState.authorName),
+      locale: 'es-AR',
+    };
+    setSelectionMenu((prev) => ({ ...prev, visible: false }));
+
+    try {
+      const result = await shareSelectionStory(payload);
+      if (result.mode === 'copied-image') {
+        toast.success('Imagen copiada al portapapeles');
+      } else if (result.mode === 'copied-text') {
+        toast.success('Texto copiado al portapapeles');
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        toast.error(err?.message || 'No se pudo compartir la selección');
+      }
+    }
+  }, [projectTitle, publishState.authorName, selectionMenu.selectedBlocks, selectionMenu.selectedText, session]);
+
+  const preserveSelectionDuringAction = useCallback((e) => {
+    selectionActionPressRef.current = true;
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    if (!editor) return;
+    const hide = () => {
+      if (selectionActionPressRef.current) {
+        selectionActionPressRef.current = false;
+        return;
+      }
+      setSelectionMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+    };
+    const update = () => updateSelectionMenu();
+
+    editor.on('selectionUpdate', update);
+    editor.on('blur', hide);
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide);
+
+    return () => {
+      editor.off('selectionUpdate', update);
+      editor.off('blur', hide);
+      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('resize', hide);
+    };
+  }, [editor, updateSelectionMenu]);
+
+  useEffect(() => {
+    if (!mobileSelectionUi || !window.visualViewport) {
+      setMobileSelectionOffset(12);
+      return undefined;
+    }
+
+    const viewport = window.visualViewport;
+    const recompute = () => {
+      const keyboardInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      setMobileSelectionOffset(12 + keyboardInset);
+    };
+
+    recompute();
+    viewport.addEventListener('resize', recompute);
+    viewport.addEventListener('scroll', recompute);
+
+    return () => {
+      viewport.removeEventListener('resize', recompute);
+      viewport.removeEventListener('scroll', recompute);
+    };
+  }, [mobileSelectionUi]);
+
   // Sync decorations when focus mode changes
   useEffect(() => {
     syncFocusMode(editor);
   }, [editor, focusMode, syncFocusMode]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!isAnalyzing);
+  }, [editor, isAnalyzing]);
 
   // Sync highlight decorations when highlights change
   useEffect(() => {
@@ -269,7 +447,7 @@ export default function FocusPage() {
               try {
                 localStorage.setItem(storageKey, JSON.stringify(loadedPages));
               } catch { /* localStorage unavailable */ }
-              saveProjectPages(projectId, loadedPages).catch(() => {});
+              saveProjectPagesWithOptions(projectId, loadedPages, { syncPublished: isHomeProject }).catch(() => {});
             }
             setPages(loadedPages);
             pagesRef.current = loadedPages;
@@ -323,7 +501,9 @@ export default function FocusPage() {
           try {
             localStorage.setItem(storageKey, JSON.stringify(loadedPages));
           } catch { /* localStorage unavailable */ }
-          if (isLoggedIn && projectId) saveProjectPages(projectId, loadedPages).catch(() => {});
+          if (isLoggedIn && projectId) {
+            saveProjectPagesWithOptions(projectId, loadedPages, { syncPublished: isHomeProject }).catch(() => {});
+          }
         }
         setPages(loadedPages);
         pagesRef.current = loadedPages;
@@ -337,14 +517,17 @@ export default function FocusPage() {
     loadContent();
 
     return () => { cancelled = true; };
-  }, [editor, projectId, isLoggedIn, storageKey, initialLoaded, activeTab, replaceHighlights]);
+  }, [editor, projectId, isLoggedIn, storageKey, initialLoaded, activeTab, replaceHighlights, isHomeProject]);
 
   // Reset when projectId changes
   useEffect(() => {
     setInitialLoaded(false);
+    setProjectTitle('');
+    setProjectSubtitle('');
     setActiveTab('coral');
     setPages({ ...EMPTY_PAGES });
     pagesRef.current = { ...EMPTY_PAGES };
+    setIsAnalyzing(false);
     if (editor) {
       editor.commands.clearContent();
       setWordCount(0);
@@ -354,17 +537,47 @@ export default function FocusPage() {
 
   // Persist highlights to Supabase when they change
   useEffect(() => {
-    if (!isLoggedIn || !projectId || !initialLoaded) return;
+    if (!isLoggedIn || !projectId || !initialLoaded || isAnalyzing) return;
     if (highlightSaveTimerRef.current) clearTimeout(highlightSaveTimerRef.current);
     highlightSaveTimerRef.current = setTimeout(() => {
       saveProjectHighlights(projectId, highlights).catch(() => {});
     }, 1500);
-  }, [highlights, projectId, isLoggedIn, initialLoaded]);
+  }, [highlights, projectId, isLoggedIn, initialLoaded, isAnalyzing]);
 
   // Handle new highlights from chat
   const handleHighlights = useCallback((newHighlights) => {
     addHighlights(newHighlights);
   }, [addHighlights]);
+
+  const handleAnalyzeStart = useCallback(() => {
+    setIsAnalyzing(true);
+    replaceHighlights([]);
+    clearHighlight();
+  }, [clearHighlight, replaceHighlights]);
+
+  const handleAnalyzeHighlight = useCallback((highlight) => {
+    addHighlights([highlight]);
+  }, [addHighlights]);
+
+  const handleAnalyzeDone = useCallback((payload) => {
+    setIsAnalyzing(false);
+    if (payload) {
+      setAnalyzeUsage({
+        hasActiveSubscription: !!payload.hasActiveSubscription,
+        remainingFreeAnalyses: payload.remainingFreeAnalyses ?? 0,
+      });
+    }
+  }, []);
+
+  const handleAnalyzeUsage = useCallback((usage) => {
+    setAnalyzeUsage(usage);
+  }, []);
+
+  const handleAnalyzeError = useCallback((error) => {
+    setIsAnalyzing(false);
+    replaceHighlights([]);
+    toast.error(error?.serverMessage || error?.message || 'No se pudo completar el análisis');
+  }, [replaceHighlights]);
 
   // Accept edit: replace matchText in editor with suggestedEdit
   const handleAcceptEdit = useCallback((highlight) => {
@@ -403,49 +616,6 @@ export default function FocusPage() {
     window.__hermesChatFocus?.(prefill);
     clearHighlight();
   }, [clearHighlight]);
-
-  // Tab switching
-  const handleTabChange = useCallback((newTab) => {
-    if (!editor || newTab === activeTab) return;
-
-    // Flush pending saves immediately
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(pagesRef.current));
-      } catch { /* */ }
-    }
-    if (supabaseSaveTimerRef.current) {
-      clearTimeout(supabaseSaveTimerRef.current);
-      if (isLoggedIn && projectId) {
-        saveProjectPages(projectId, pagesRef.current).catch(() => {});
-      }
-    }
-
-    // Save current content into pages (empty editor → empty string)
-    const hasText = editor.getText().trim().length > 0;
-    const currentMd = hasText ? editor.getMarkdown() : '';
-    const updated = { ...pagesRef.current, [activeTab]: currentMd };
-    setPages(updated);
-    pagesRef.current = updated;
-
-    // Switch tab
-    switchingRef.current = true;
-    setActiveTab(newTab);
-    activeTabRef.current = newTab;
-    editor.commands.setContent(updated[newTab] || '', { contentType: 'markdown' });
-    switchingRef.current = false;
-
-    setWordCount(getWordCount(editor.getText()));
-    clearHighlight();
-
-    const tabsUsed = Object.values(pagesRef.current).filter(v => v?.trim()).length;
-    posthog.capture('tab_switched', {
-      from_tab: activeTab,
-      to_tab: newTab,
-      tabs_with_content: tabsUsed,
-    });
-  }, [editor, activeTab, storageKey, isLoggedIn, projectId, clearHighlight]);
 
   const handlePublishChange = useCallback((updates) => {
     setPublishState((prev) => ({ ...prev, ...updates }));
@@ -503,9 +673,20 @@ export default function FocusPage() {
   }, [projectId, projectTitle, publishState.published, handlePublishChange]);
 
   const handleTitleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') { e.preventDefault(); commitTitle(titleEditValue); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitTitle(titleEditValue);
+      setSubtitleEditValue(projectSubtitle || '');
+      setEditingSubtitle(true);
+      requestAnimationFrame(() => {
+        const input = subtitleInputRef.current;
+        if (!input) return;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    }
     if (e.key === 'Escape') { e.preventDefault(); setEditingTitle(false); }
-  }, [commitTitle, titleEditValue]);
+  }, [commitTitle, projectSubtitle, titleEditValue]);
 
   const handleTitleBlur = useCallback(() => {
     commitTitle(titleEditValue);
@@ -535,28 +716,31 @@ export default function FocusPage() {
   }, [projectId, projectSubtitle]);
 
   const handleSubtitleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') { e.preventDefault(); commitSubtitle(subtitleEditValue); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitSubtitle(subtitleEditValue);
+      requestAnimationFrame(() => {
+        if (!editor) return;
+        editor.chain().focus('end').run();
+      });
+    }
     if (e.key === 'Escape') { e.preventDefault(); setEditingSubtitle(false); }
-  }, [commitSubtitle, subtitleEditValue]);
+  }, [commitSubtitle, editor, subtitleEditValue]);
 
   const handleSubtitleBlur = useCallback(() => {
     commitSubtitle(subtitleEditValue);
   }, [commitSubtitle, subtitleEditValue]);
 
+  useEffect(() => {
+    if (editingTitle) autosizeTextarea(titleInputRef.current);
+  }, [editingTitle, titleEditValue]);
+
+  useEffect(() => {
+    if (editingSubtitle) autosizeTextarea(subtitleInputRef.current);
+  }, [editingSubtitle, subtitleEditValue]);
+
   // Stable callback for child components to read pages on-demand (avoids re-renders on every keystroke)
   const getPages = useCallback(() => pagesRef.current, []);
-
-  // Close shortcuts popover on click outside
-  useEffect(() => {
-    if (!shortcutsOpen) return;
-    function handleMouseDown(e) {
-      if (shortcutsRef.current && !shortcutsRef.current.contains(e.target)) {
-        setShortcutsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [shortcutsOpen]);
 
   // Close actions menu on outside click
   useEffect(() => {
@@ -596,125 +780,143 @@ export default function FocusPage() {
   }, [editor]);
 
   const wordLabel = wordCount === 1 ? t('focusPage.word') : t('focusPage.words');
+  const isProjectLoading = isLoggedIn && !!projectId && !initialLoaded;
+  const trainItems = [
+    {
+      label: 'Q&A',
+      icon: <ChatCircleDots size={16} weight="regular" />,
+      onSelect: () => setQaOpen(true),
+    },
+    {
+      label: 'Tarjetas',
+      icon: <CardsThree size={16} weight="regular" />,
+      onSelect: () => setFlashcardsOpen(true),
+    },
+  ];
+
+  const projectStartSlot = isLoggedIn && projectId ? (
+    <ProjectSwitcher
+      projectId={projectId}
+      projectTitle={projectTitle}
+      onDropdownOpen={() => setDropdownOpen(true)}
+      onDropdownClose={() => setDropdownOpen(false)}
+      onProjectRenamed={(id, newTitle) => {
+        if (id === projectId) setProjectTitle(newTitle);
+      }}
+      renderTrigger={({ toggleDropdown, projectTitle: currentTitle }) => (
+        <button
+          type="button"
+          className={styles.navProjectTrigger}
+          onClick={toggleDropdown}
+          aria-label="Abrir proyectos"
+        >
+          <span className={styles.navLogo}>Diles</span>
+          <span className={styles.navSeparator}>/</span>
+          <span className={styles.navProjectCurrent}>
+            <TextAlignLeft size={16} weight="regular" />
+            <span className={styles.navProjectLabel}>{currentTitle}</span>
+          </span>
+        </button>
+      )}
+    />
+  ) : null;
+
+  const mobileMenuControl = (
+    <Button
+      variant="outline"
+      size="sm"
+      iconOnly
+      aria-label="Menú"
+      onClick={() => setActionsOpen((open) => !open)}
+    >
+      <List size={16} weight="regular" />
+    </Button>
+  );
+
   return (
     <div className={styles.page}>
-      {/* Settings bar */}
       <div className={styles.hoverZone}>
-        <div
-          className={`${styles.settingsBar} ${styles.settingsBarVisible}`}
-        >
-          {isLoggedIn && projectId ? (
-            <ProjectSwitcher
+        <Navbar
+          variant="project"
+          title={projectTitle || 'Di algo...'}
+          wordCount={wordCount}
+          wordLabel={wordLabel}
+          startSlot={projectStartSlot}
+          analyzeControl={isLoggedIn && projectId && aiEnabled ? (
+            <AnalyzeMenu
+              projectId={projectId}
+              session={session}
+              getPages={getPages}
+              activeTab={activeTab}
+              onStart={handleAnalyzeStart}
+              onHighlight={handleAnalyzeHighlight}
+              onDone={handleAnalyzeDone}
+              onError={handleAnalyzeError}
+              onUsage={handleAnalyzeUsage}
+            />
+          ) : null}
+          trainItems={aiEnabled ? trainItems : []}
+          publishControl={isLoggedIn && projectId ? (
+            <ShareButton
               projectId={projectId}
               projectTitle={projectTitle}
+              getPages={getPages}
+              published={publishState.published}
+              shortId={publishState.shortId}
+              slug={publishState.slug}
+              authorName={publishState.authorName}
+              publishedTabs={publishState.publishedTabs}
+              onPublishChange={handlePublishChange}
+              isOpen={shareOpen}
+              onOpenChange={setShareOpen}
+              renderTrigger={({ toggleOpen, title }) => (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconOnly
+                  aria-label={title}
+                  onClick={toggleOpen}
+                >
+                  <GlobeSimple size={16} weight="regular" />
+                </Button>
+              )}
+            />
+          ) : null}
+          accountControl={(
+            <UserMenu
               onDropdownOpen={() => setDropdownOpen(true)}
               onDropdownClose={() => setDropdownOpen(false)}
-              onProjectRenamed={(id, newTitle) => {
-                if (id === projectId) setProjectTitle(newTitle);
-              }}
             />
-          ) : (
-            <span className={styles.brandLabel}>{projectTitle || 'Diless'}</span>
           )}
+          mobileMenuControl={mobileMenuControl}
+        />
 
-          <div className={styles.settingsRight}>
-            {isOffline && <span className={styles.offlineBadge}>{t('focusPage.offline')}</span>}
-            <span className={styles.wordCount}>
-              {wordCount} {wordLabel}
-            </span>
-            {isLoggedIn && projectId && aiEnabled && (
-              <button
-                className={styles.langBtn}
-                onClick={() => setQaOpen(true)}
-                title="Q&A Simulation"
-                aria-label="Abrir Q&A Simulation"
-              >
-                Q&amp;A
-              </button>
-            )}
-            <button
-              className={styles.langBtn}
-              onClick={toggleReadingSize}
-              title={isLargeReading ? 'Cambiar a letra pequeña' : 'Cambiar a letra grande'}
-              aria-label={isLargeReading ? 'Cambiar a letra pequeña' : 'Cambiar a letra grande'}
-            >
-              {isLargeReading ? 'A-' : 'A+'}
-            </button>
-            {isLoggedIn && projectId && (
-              <ShareButton
-                projectId={projectId}
-                projectTitle={projectTitle}
-                getPages={getPages}
-                published={publishState.published}
-                shortId={publishState.shortId}
-                slug={publishState.slug}
-                authorName={publishState.authorName}
-                publishedTabs={publishState.publishedTabs}
-                onPublishChange={handlePublishChange}
-                isOpen={shareOpen}
-                onOpenChange={setShareOpen}
-              />
-            )}
-            {/* Shortcuts reference — desktop only */}
-            <div className={styles.shortcutsWrap} ref={shortcutsRef}>
-              <button
-                className={styles.shortcutsBtn}
-                onClick={() => setShortcutsOpen((v) => !v)}
-                title={t('focusPage.shortcutsAndFormatting')}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </button>
-              {shortcutsOpen && (
-                <div className={styles.shortcutsPopover}>
-                  <div className={styles.shortcutsSection}>
-                    <div className={styles.shortcutsSectionTitle}>{t('focusPage.shortcuts')}</div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+K</kbd><span>{t('focusPage.insertLink')}</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+B</kbd><span>{t('focusPage.bold')}</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+I</kbd><span>{t('focusPage.italic')}</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+Z</kbd><span>{t('focusPage.undo')}</span></div>
-                    <div className={styles.shortcutRow}><kbd>Cmd+Shift+Z</kbd><span>{t('focusPage.redo')}</span></div>
-                  </div>
-                  <div className={styles.shortcutsSection}>
-                    <div className={styles.shortcutsSectionTitle}>{t('focusPage.markdown')}</div>
-                    <div className={styles.shortcutRow}><code># </code><span>{t('focusPage.heading')}</span></div>
-                    <div className={styles.shortcutRow}><code>**text**</code><span>{t('focusPage.bold')}</span></div>
-                    <div className={styles.shortcutRow}><code>*text*</code><span>{t('focusPage.italic')}</span></div>
-                    <div className={styles.shortcutRow}><code>~~text~~</code><span>{t('focusPage.strikethrough')}</span></div>
-                    <div className={styles.shortcutRow}><code>`code`</code><span>{t('focusPage.inlineCode')}</span></div>
-                    <div className={styles.shortcutRow}><code>&gt; </code><span>{t('focusPage.blockquote')}</span></div>
-                    <div className={styles.shortcutRow}><code>- </code><span>{t('focusPage.bulletList')}</span></div>
-                    <div className={styles.shortcutRow}><code>1. </code><span>{t('focusPage.numberedList')}</span></div>
-                    <div className={styles.shortcutRow}><code>---</code><span>{t('focusPage.divider')}</span></div>
-                    <div className={styles.shortcutRow}><code>[text](url)</code><span>{t('focusPage.link')}</span></div>
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* Mobile actions menu */}
-            <div className={styles.actionsWrap} ref={actionsRef}>
-              <button
-                className={styles.actionsBtn}
-                onClick={() => setActionsOpen((v) => !v)}
-                title={t('focusPage.actions')}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                  <circle cx="3" cy="8" r="1.5" />
-                  <circle cx="8" cy="8" r="1.5" />
-                  <circle cx="13" cy="8" r="1.5" />
-                </svg>
-              </button>
-              {actionsOpen && (
-                <div className={styles.actionsMenu}>
+        {/* Mobile actions menu */}
+        <div className={styles.navActionsOverlay}>
+          <div className={styles.actionsWrap} ref={actionsRef}>
+            {actionsOpen && (
+              <div className={styles.actionsMenu}>
                   <div className={styles.actionsMenuInfo}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                       <path d="M2 13h12M2 9h8M2 5h12M2 1h5" />
                     </svg>
                     {wordCount} {wordLabel}
                   </div>
+                  {isLoggedIn && projectId && aiEnabled && (
+                    <button
+                      className={styles.actionsMenuItem}
+                      onClick={() => {
+                        setFlashcardsOpen(true);
+                        setActionsOpen(false);
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 3.5h10v9H3z" />
+                        <path d="M5.5 6.25h5M5.5 8.5h4M5.5 10.75h3" />
+                      </svg>
+                      Generar tarjetas
+                    </button>
+                  )}
                   {isLoggedIn && projectId && aiEnabled && (
                     <button
                       className={styles.actionsMenuItem}
@@ -757,13 +959,8 @@ export default function FocusPage() {
                     </svg>
                     {postCopied ? t('focusPage.copied') : t('focusPage.copyPost')}
                   </button>
-                </div>
-              )}
-            </div>
-            <UserMenu
-              onDropdownOpen={() => setDropdownOpen(true)}
-              onDropdownClose={() => setDropdownOpen(false)}
-            />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -772,18 +969,26 @@ export default function FocusPage() {
       <div className={styles.scrollArea}>
         {/* Editable project title */}
         <div className={styles.pageTitle}>
-          {isLoggedIn && projectId && editingTitle ? (
-            <input
+          {isProjectLoading ? (
+            <div className={styles.titleLoading}>
+              <div className={styles.titleLoadingLine} style={{ width: '58%' }} />
+            </div>
+          ) : isLoggedIn && projectId && editingTitle ? (
+            <textarea
+              ref={titleInputRef}
               className={styles.pageTitleInput}
               value={titleEditValue}
               onChange={(e) => setTitleEditValue(e.target.value)}
+              onInput={(e) => autosizeTextarea(e.currentTarget)}
               onKeyDown={handleTitleKeyDown}
               onBlur={handleTitleBlur}
+              placeholder="Di algo..."
               autoFocus
+              rows={1}
             />
           ) : isLoggedIn && projectId ? (
             <button className={styles.pageTitleText} onClick={startEditingTitle}>
-              {projectTitle || t('focusPage.untitled')}
+              {projectTitle || 'Di algo...'}
             </button>
           ) : (
             <span className={styles.pageTitleText}>{projectTitle || t('focusPage.untitled')}</span>
@@ -792,15 +997,18 @@ export default function FocusPage() {
         {/* Single canvas mode (tabs removed in Diless MVP) */}
         {/* Optional subtitle */}
         <div className={styles.subtitle}>
-          {isLoggedIn && projectId && editingSubtitle ? (
-            <input
+          {isProjectLoading ? null : isLoggedIn && projectId && editingSubtitle ? (
+            <textarea
+              ref={subtitleInputRef}
               className={styles.subtitleInput}
               value={subtitleEditValue}
               onChange={(e) => setSubtitleEditValue(e.target.value)}
+              onInput={(e) => autosizeTextarea(e.currentTarget)}
               onKeyDown={handleSubtitleKeyDown}
               onBlur={handleSubtitleBlur}
               placeholder={t('focusPage.addSubtitlePlaceholder')}
               autoFocus
+              rows={1}
             />
           ) : projectSubtitle ? (
             isLoggedIn && projectId ? (
@@ -818,7 +1026,36 @@ export default function FocusPage() {
         </div>
         <div className={styles.content}>
           <div className={styles.editorWrap}>
-            <EditorContent editor={editor} />
+            {isProjectLoading ? (
+              <div className={styles.editorLoading} aria-label="Cargando artículo">
+                <div className={styles.editorLoadingLine} style={{ width: '62%', height: '26px' }} />
+                <div className={styles.editorLoadingLine} style={{ width: '92%' }} />
+                <div className={styles.editorLoadingLine} style={{ width: '86%' }} />
+                <div className={styles.editorLoadingLine} style={{ width: '78%' }} />
+              </div>
+            ) : (
+              <EditorContent editor={editor} />
+            )}
+            {isAnalyzing ? (
+              <div className={styles.analyzeOverlay} aria-live="polite" aria-label="Analizando">
+                <div className={styles.dotGridLoader} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                {analyzeUsage && !analyzeUsage.hasActiveSubscription ? (
+                  <div className={styles.analyzeUsage}>
+                    Te quedan {analyzeUsage.remainingFreeAnalyses} análisis gratuitos
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -832,21 +1069,84 @@ export default function FocusPage() {
         onReply={handleReply}
       />
 
+      {selectionMenu.visible && !mobileSelectionUi && (
+        <div
+          className={styles.selectionMenu}
+          style={{ left: `${selectionMenu.left}px`, top: `${selectionMenu.top}px` }}
+          role="dialog"
+          aria-label="Acciones de resaltado"
+        >
+          <button
+            type="button"
+            className={styles.selectionMenuButton}
+            onPointerDown={preserveSelectionDuringAction}
+            onClick={handleToggleManualHighlight}
+          >
+            {selectionMenu.isHighlighted ? 'Eliminar' : 'Destacar'}
+          </button>
+          <button
+            type="button"
+            className={styles.selectionMenuButton}
+            onPointerDown={preserveSelectionDuringAction}
+            onClick={handleShareSelection}
+          >
+            Compartir
+          </button>
+        </div>
+      )}
+
+      {selectionMenu.visible && mobileSelectionUi && (
+        <div
+          className={styles.mobileSelectionBar}
+          style={{ bottom: `${mobileSelectionOffset}px` }}
+          role="dialog"
+          aria-label="Acciones de resaltado"
+        >
+          <button
+            type="button"
+            className={styles.mobileSelectionButton}
+            onPointerDown={preserveSelectionDuringAction}
+            onClick={handleToggleManualHighlight}
+          >
+            {selectionMenu.isHighlighted ? 'Eliminar' : 'Destacar'}
+          </button>
+          <button
+            type="button"
+            className={styles.mobileSelectionButton}
+            onPointerDown={preserveSelectionDuringAction}
+            onClick={handleShareSelection}
+          >
+            Compartir
+          </button>
+        </div>
+      )}
+
       {/* Link tooltip */}
       <LinkTooltip tooltip={linkTooltip} isMac={isMac} />
 
+      <FlashcardsView
+        open={flashcardsOpen}
+        onClose={() => setFlashcardsOpen(false)}
+        projectId={projectId}
+        session={session}
+        isOffline={isOffline}
+        getPages={getPages}
+      />
+
       {/* Floating chat window (optional in MVP) */}
       {aiEnabled ? (
-        <Sentry.ErrorBoundary fallback={<div style={{ position: 'fixed', bottom: 24, left: 24, color: 'var(--text-muted)', fontSize: 13 }}>{t('focusPage.chatUnavailable')}</div>}>
-          <FocusChatWindow
-            projectId={projectId}
-            getPages={getPages}
-            activeTab={activeTab}
-            onHighlights={handleHighlights}
-            session={session}
-            isOffline={isOffline}
-          />
-        </Sentry.ErrorBoundary>
+        <div className={styles.assistantHidden}>
+          <Sentry.ErrorBoundary fallback={<div style={{ position: 'fixed', bottom: 24, left: 24, color: 'var(--text-muted)', fontSize: 13 }}>{t('focusPage.chatUnavailable')}</div>}>
+            <FocusChatWindow
+              projectId={projectId}
+              getPages={getPages}
+              activeTab={activeTab}
+              onHighlights={handleHighlights}
+              session={session}
+              isOffline={isOffline}
+            />
+          </Sentry.ErrorBoundary>
+        </div>
       ) : null}
 
       <QASimulatorModal

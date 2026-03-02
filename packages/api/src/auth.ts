@@ -40,7 +40,7 @@ export async function signupWithInvite(
   return res.json();
 }
 
-export async function consumeInviteCode(inviteCode: string): Promise<{ success: boolean; trialDays?: number }> {
+export async function consumeInviteCode(inviteCode: string): Promise<{ success: boolean; trialDays?: number; trialToken?: string | null }> {
   const baseUrl = normalizeBaseUrl(getPlatform().serverBaseUrl);
   const res = await fetch(`${baseUrl}/api/auth/use-invite`, {
     method: 'POST',
@@ -56,7 +56,7 @@ export async function consumeInviteCode(inviteCode: string): Promise<{ success: 
   return res.json();
 }
 
-export async function activateTrial(trialDays: number, accessToken: string): Promise<{ success: boolean }> {
+export async function activateTrial(trialToken: string, accessToken: string): Promise<{ success: boolean }> {
   const baseUrl = normalizeBaseUrl(getPlatform().serverBaseUrl);
   const res = await fetch(`${baseUrl}/api/auth/activate-trial`, {
     method: 'POST',
@@ -64,7 +64,7 @@ export async function activateTrial(trialDays: number, accessToken: string): Pro
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ trialDays }),
+    body: JSON.stringify({ trialToken }),
   });
 
   if (!res.ok) {

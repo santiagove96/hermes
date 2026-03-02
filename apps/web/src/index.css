@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,GRAD,wdth,wght@8..144,-50..100,50..150,100..900&display=swap');
 
 @font-face {
-  font-family: 'Diless Helvetica Neue';
+  font-family: 'Helvetica Neue';
   src: url('./assets/fonts/HelveticaNeue-Roman.otf') format('opentype');
   font-style: normal;
   font-weight: 400;
@@ -9,7 +9,7 @@
 }
 
 @font-face {
-  font-family: 'Diless Helvetica Neue';
+  font-family: 'Helvetica Neue';
   src: url('./assets/fonts/HelveticaNeueItalic.ttf') format('truetype');
   font-style: italic;
   font-weight: 400;
@@ -17,7 +17,15 @@
 }
 
 @font-face {
-  font-family: 'Diless Helvetica Neue';
+  font-family: 'Helvetica Neue';
+  src: url('./assets/fonts/HelveticaNeueMedium.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Helvetica Neue';
   src: url('./assets/fonts/HelveticaNeueBold.ttf') format('truetype');
   font-style: normal;
   font-weight: 700;
@@ -25,7 +33,7 @@
 }
 
 @font-face {
-  font-family: 'Diless Helvetica Neue';
+  font-family: 'Helvetica Neue';
   src: url('./assets/fonts/HelveticaNeueBoldItalic.ttf') format('truetype');
   font-style: italic;
   font-weight: 700;
@@ -43,6 +51,7 @@
 
 /* ===== LIGHT THEME (default) ===== */
 :root {
+  color-scheme: light;
   --bg-base: #f5f3f0;
   --bg-surface: #fcfaf7;
   --bg-overlay: #edebe8;
@@ -58,9 +67,32 @@
   --border-subtle: rgba(40, 36, 31, 0.12);
   --error: #e85454;
   --error-bg: rgba(232, 84, 84, 0.1);
+  --highlight-manual: #f9e4b4;
+
+  --sm-color: #00000029;
+  --sm-x: 0px;
+  --sm-y: 4px;
+  --sm-blur: 16px;
+  --sm-spread: -4px;
+  --xs-color: #00000014;
+  --xs-x: 0px;
+  --xs-y: 2px;
+  --xs-blur: 4px;
+  --xs-spread: -2px;
+  --md-color: #00000029;
+  --md-x: 0px;
+  --md-y: 8px;
+  --md-blur: 32px;
+  --md-spread: -8px;
+
+  --shadow-xs: var(--xs-x) var(--xs-y) var(--xs-blur) var(--xs-spread) var(--xs-color);
+  --shadow-sm: var(--sm-x) var(--sm-y) var(--sm-blur) var(--sm-spread) var(--sm-color);
+  --shadow-md: var(--md-x) var(--md-y) var(--md-blur) var(--md-spread) var(--md-color);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
 
   /* Transitional utility tokens (created while replacing repeated hardcoded values).
      Keep these centralized for now; later we can merge/remove them once semantics are unified. */
+     
   --text-inverse: rgba(255, 255, 255, 0.94);
   --surface-inverse: #1a1a1a;
   --surface-inverse-hover: #333;
@@ -71,13 +103,13 @@
   --hover-soft: rgba(0, 0, 0, 0.04);
   --hover-medium: rgba(0, 0, 0, 0.06);
   --focus-ring-soft: rgba(0, 0, 0, 0.08);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+
   --underline-subtle: rgba(0, 0, 0, 0.15);
   --underline-default: rgba(0, 0, 0, 0.3);
   --underline-strong: rgba(0, 0, 0, 0.6);
   --neutral-hover-border: rgba(0, 0, 0, 0.2);
-  --success: #6b9e7a;
+  --success: #7DC292;
   --success-strong: #5a8a68;
   --success-border: rgba(107, 158, 122, 0.3);
   --success-border-strong: rgba(107, 158, 122, 0.5);
@@ -90,9 +122,11 @@
   --success-ui: #2e7d32;
   --warning: #b45309;
   --warning-bg: rgba(180, 83, 9, 0.1);
-  --font-sans: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-ui: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-reading: 'Diless Helvetica Neue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-ui: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-reading: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-serif: 'Roboto Serif', Georgia, serif;
   --font-code: 'SF Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
   --font-xs: 12px;
@@ -100,8 +134,9 @@
   --font-base: 16px;
   --font-lg: 18px;
   --font-xl: 20px;
-  --weight-normal: 400;
-  --weight-semi: 600;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-ibold: bold;
   --weight-bold: 700;
 
   /* Typography rhythm */
@@ -116,110 +151,111 @@
   --type-mono-xs-weight: 600;
   --type-mono-xs-tracking: 0.4px;
 
-  /* Semantic typography tokens (UI) */
-  --type-ui-caption-size: 12px;
-  --type-ui-caption-weight: 400;
+  /* Semantic typography tokens (UI / body) */
+  --text-xl-size: 20px;
+  --text-xl-line: 28px;
+  --text-xl-spacing: 0px;
 
-  --type-ui-meta-size: 14px;
-  --type-ui-meta-line: 20px;
+  --text-lg-size: 18px;
+  --text-lg-line: 24px;
+  --text-lg-spacing: 0px;
 
-  --type-ui-body-size: 14px;
-  --type-ui-body-line: 20px;
+  --text-md-size: 16px;
+  --text-md-line: 22px;
+  --text-md-spacing: 0px;
 
-  --type-ui-input-size: 14px;
-  --type-ui-input-line: 20px;
+  --text-sm-size: 14px;
+  --text-sm-line: 20px;
+  --text-sm-spacing: 0px;
 
-  --type-ui-subtitle-size: 16px;
-  --type-ui-subtitle-weight: 400;
-  --type-ui-subtitle-line: 22px;
+  --text-xs-size: 12px;
+  --text-xs-line: 16px;
+  --text-xs-spacing: 0px;
 
-  --type-ui-title-family: var(--font-serif);
-  --type-ui-title-size: 32px;
-  --type-ui-title-weight: 560;
-  --type-ui-title-line: 36px;
-  --type-ui-title-serif-grad: -40;
-  --type-ui-title-serif-wdth: 54;
-  --type-ui-title-serif-opsz: 88;
+  /* Semantic typography tokens (heading / display) */
+  --display-sm-size: 40px;
+  --display-sm-line: 48px;
+  --display-sm-spacing: -1px;
+
+  --heading-lg-size: 48px;
+  --heading-lg-line: 52px;
+  --heading-lg-spacing: -0.4px;
+
+  --heading-md-size: 32px;
+  --heading-md-line: 36px;
+  --heading-md-spacing: -1px;
+
+  --heading-sm-size: 24px;
+  --heading-sm-line: 26px;
+  --heading-sm-spacing: -0.4px;
+
+  --heading-xs-size: 20px;
+  --heading-xs-line: 24px;
+  --heading-xs-spacing: -0.4px;
 
   /* Semantic typography tokens (reading/editor) */
   --type-reading-body-size: 16px;
   --type-reading-body-line: 26px;
-  --type-reading-body-tracking: 0px;
-
-  --type-reading-page-title-family: var(--font-serif);
-  --type-reading-page-title-size: 32px;
-  --type-reading-page-title-weight: 560;
-  --type-reading-page-title-line: 36px;
-  --type-reading-page-title-serif-grad: -40;
-  --type-reading-page-title-serif-wdth: 54;
-  --type-reading-page-title-serif-opsz: 88;
-
-  --type-reading-h1-family: var(--font-serif);
-  --type-reading-h1-size: 24px;
-  --type-reading-h1-weight: 560;
-  --type-reading-h1-line: 28px;
-  --type-reading-h1-serif-grad: -40;
-  --type-reading-h1-serif-wdth: 54;
-  --type-reading-h1-serif-opsz: 88;
-
-  --type-reading-h2-family: var(--font-serif);
-  --type-reading-h2-size: 20px;
-  --type-reading-h2-weight: 560;
-  --type-reading-h2-line: 24px;
-  --type-reading-h2-serif-grad: -40;
-  --type-reading-h2-serif-wdth: 54;
-  --type-reading-h2-serif-opsz: 88;
-
-  --type-reading-h3-family: var(--font-serif);
-  --type-reading-h3-size: 18px;
-  --type-reading-h3-weight: 560;
-  --type-reading-h3-line: 24px;
-  --type-reading-h3-serif-grad: -40;
-  --type-reading-h3-serif-wdth: 54;
-  --type-reading-h3-serif-opsz: 88;
+  --type-reading-body-tracking: 0.3px;
 
   /* Semantic typography tokens (code) */
   --type-code-inline-size: 0.9em;
   --type-code-block-size: 14px;
 }
 
+:root[data-theme='dark'],
+:root[data-theme='system'][data-resolved-theme='dark'] {
+  --bg-base: #1d1c1a;
+  --bg-surface: #201f1d;
+  --bg-overlay: #292825;
+  --bg-hover: #292825;
+  --text-primary: #f5f3f0;
+  --text-muted: #f5f3f0cc;
+  --text-dim: #f5f3f0a3;
+  --accent-primary: #ffffff;
+  --accent: var(--accent-primary);
+  --border-accent: #f5f3f03d;
+  --brand-accent: #ffffff;
+  --brand-border: #ffffff;
+  --border-subtle: #f5f3f014;
+  --highlight-manual: #eba6063d;
+
+  --text-inverse: rgba(10, 10, 9, 0.94);
+  --surface-inverse: #f5f3f0;
+  --surface-inverse-hover: #d8d4cf;
+  --surface-disabled: #6c6863;
+  --content-rule: rgba(245, 243, 240, 0.14);
+  --content-placeholder: rgba(245, 243, 240, 0.28);
+  --code-inline-bg: rgba(245, 243, 240, 0.08);
+  --hover-soft: rgba(245, 243, 240, 0.05);
+  --hover-medium: rgba(245, 243, 240, 0.08);
+  --focus-ring-soft: rgba(245, 243, 240, 0.12);
+
+  --underline-subtle: rgba(245, 243, 240, 0.2);
+  --underline-default: rgba(245, 243, 240, 0.38);
+  --underline-strong: rgba(245, 243, 240, 0.7);
+  --neutral-hover-border: rgba(245, 243, 240, 0.22);
+  --success: #7dc292;
+  --success-strong: #95d8a8;
+  --success-border: rgba(125, 194, 146, 0.28);
+  --success-border-strong: rgba(125, 194, 146, 0.46);
+  --danger: #ff7f7f;
+  --danger-alt: #ff9a9a;
+  --danger-bg: rgba(255, 127, 127, 0.1);
+  --danger-border: rgba(255, 127, 127, 0.24);
+  --danger-border-strong: rgba(255, 127, 127, 0.36);
+  --danger-bg-soft: rgba(255, 127, 127, 0.08);
+  --success-ui: #95d8a8;
+  --warning: #f5c56b;
+  --warning-bg: rgba(245, 197, 107, 0.12);
+
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
 :root[data-reading-size="large"] {
   --type-reading-body-size: 18px;
   --type-reading-body-line: 28px;
-}
-
-/* ===== DUSK THEME ===== */
-:root[data-theme="dusk"] {
-  --bg-base: #16171e;
-  --bg-surface: #1d1f29;
-  --bg-overlay: #242632;
-  --bg-hover: #2b2d3a;
-  --text-primary: #ebebeb;
-  --text-muted: #a898b3;
-  --text-dim: #7a7085;
-  --accent-primary: #cc76a9;
-  --accent: var(--accent-primary);
-  --border-accent: #754967;
-  --brand-accent: #76cc99;
-  --brand-border: #497566;
-  --border-subtle: rgba(235, 235, 235, 0.12);
-}
-
-/* ===== DAWN THEME (warm amber dark) ===== */
-:root[data-theme="dawn"] {
-  --bg-base: #1e1a16;
-  --bg-surface: #252019;
-  --bg-overlay: #2d271f;
-  --bg-hover: #38322a;
-  --text-primary: #ebebde;
-  --text-muted: #b3a898;
-  --text-dim: #857a6a;
-  --accent-primary: #cc9a76;
-  --accent: var(--accent-primary);
-  --border-accent: #755c49;
-  --brand-accent: #76a9cc;
-  --brand-border: #496275;
-  --border-subtle: rgba(235, 230, 220, 0.12);
+  --type-reading-body-tracking: 0.3px;
 }
 
 html {
@@ -264,21 +300,49 @@ img {
   scrollbar-color: var(--text-dim) var(--bg-base);
 }
 
+html,
+body {
+  scrollbar-color: var(--text-dim) var(--bg-base);
+}
+
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-track {
   background: var(--bg-base);
 }
 
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
 *::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border: 2px solid var(--bg-base);
+  border: 1px solid var(--bg-base);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: var(--bg-overlay);
+  border: 1px solid var(--bg-base);
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-hover);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
   background: var(--bg-hover);
 }

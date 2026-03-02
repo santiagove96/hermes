@@ -5,10 +5,12 @@ import * as Sentry from '@sentry/react'
 import posthog from 'posthog-js'
 import './index.css'
 import App from './App.jsx'
+import SentryFallback from './components/SentryFallback.jsx'
 import './lib/supabase'
 import AuthProvider from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { ReadingSizeProvider } from './contexts/ReadingSizeContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -40,27 +42,18 @@ if (import.meta.env.VITE_POSTHOG_KEY) {
   })
 }
 
-function SentryFallback() {
-  return (
-    <main style={{ padding: 'var(--content-padding)', textAlign: 'center', marginTop: '80px' }}>
-      <h1 style={{ fontSize: 'var(--font-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: '8px' }}>Something went wrong</h1>
-      <p style={{ fontSize: 'var(--font-base)', color: 'var(--text-muted)' }}>
-        Try <button onClick={() => window.location.reload()} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit' }}>reloading the page</button>.
-      </p>
-    </main>
-  )
-}
-
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
       <BrowserRouter>
         <LanguageProvider>
-          <ReadingSizeProvider>
-            <AuthProvider>
-                <App />
-            </AuthProvider>
-          </ReadingSizeProvider>
+          <ThemeProvider>
+            <ReadingSizeProvider>
+              <AuthProvider>
+                  <App />
+              </AuthProvider>
+            </ReadingSizeProvider>
+          </ThemeProvider>
         </LanguageProvider>
       </BrowserRouter>
     </Sentry.ErrorBoundary>

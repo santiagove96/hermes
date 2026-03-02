@@ -7,6 +7,7 @@ import { checkMessageLimit } from '../middleware/usageGate.js';
 import logger from '../lib/logger.js';
 import { mcpManager } from '../lib/mcp.js';
 import { isAdminUser } from '../lib/config.js';
+import { createHighlightTool, type HighlightData } from '../lib/highlights.js';
 import type { UserMcpServerConfig } from '../lib/mcp.js';
 
 const router = Router();
@@ -45,14 +46,6 @@ type AssistantMessage = {
   timestamp: string;
 };
 
-type HighlightData = {
-  id: string;
-  type: 'question' | 'suggestion' | 'edit' | 'voice' | 'weakness' | 'evidence' | 'wordiness' | 'factcheck';
-  matchText: string;
-  comment: string;
-  suggestedEdit?: string;
-};
-
 const ChatSchema = z.object({
   projectId: z.string().uuid(),
   message: z.string().trim().min(1).max(6000),
@@ -60,37 +53,16 @@ const ChatSchema = z.object({
   activeTab: z.string().default('coral'),
 });
 
-const HIGHLIGHT_TOOL: Anthropic.Messages.Tool = {
-  name: 'add_highlight',
-  description:
-    "Highlight a passage in the writer's text to ask a question, make a suggestion, or propose an edit. " +
-    'The matchText MUST be an exact verbatim substring from the document. Use sparingly (1-4 per response).',
-  input_schema: {
-    type: 'object' as const,
-    properties: {
-      type: {
-        type: 'string',
-        enum: ['question', 'suggestion', 'edit', 'voice', 'weakness', 'evidence', 'wordiness', 'factcheck'],
-        description:
-          'question = unclear intent or asks for clarification, suggestion = structural or conceptual improvement, edit = specific text replacement, voice = passage sounds different from the writer\'s established voice, weakness = the weakest argument or thinnest section, evidence = where specific examples/data/anecdotes would strengthen, wordiness = passage could say the same in fewer words (provide suggestedEdit with tightened version), factcheck = claim that may need citation or could be factually wrong',
-      },
-      matchText: {
-        type: 'string',
-        description:
-          'EXACT verbatim substring from the document to highlight. Must match character-for-character.',
-      },
-      comment: {
-        type: 'string',
-        description: 'The question, suggestion, or explanation shown to the writer.',
-      },
-      suggestedEdit: {
-        type: 'string',
-        description: 'Replacement text. Only provide for type=edit.',
-      },
-    },
-    required: ['type', 'matchText', 'comment'],
-  },
-};
+const HIGHLIGHT_TOOL = createHighlightTool([
+  'question',
+  'suggestion',
+  'edit',
+  'voice',
+  'weakness',
+  'evidence',
+  'wordiness',
+  'factcheck',
+]);
 
 const CITE_SOURCE_TOOL: Anthropic.Messages.Tool = {
   name: 'cite_source',
@@ -382,7 +354,7 @@ router.post('/chat', requireAuth, requireAiEnabled, checkMessageLimit, async (re
           messages,
           stream: true,
         }, { signal: timeoutController.signal });
-      } catch (err: any) {
+      } catch (err: unknown) {
         clearTimeout(timeoutId);
         throw err;
       }
@@ -560,12 +532,12 @@ router.post('/chat', requireAuth, requireAiEnabled, checkMessageLimit, async (re
       safeSseWrite(`event: done\ndata: ${JSON.stringify({ messageId: crypto.randomUUID() })}\n\n`);
       res.end();
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // AbortError from timeout or client disconnect — handle gracefully
-    if (error?.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       logger.info({ projectId }, 'Assistant stream aborted (timeout or client disconnect)');
     } else {
-      logger.error({ error: error?.message, projectId }, 'Assistant chat stream failed');
+      logger.error({ error: error instanceof Error ? error.message : String(error), projectId }, 'Assistant chat stream failed');
     }
     if (!clientDisconnected) {
       safeSseWrite(`event: error\ndata: ${JSON.stringify({ error: 'Stream failed' })}\n\n`);

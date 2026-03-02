@@ -1,28 +1,48 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link id="app-favicon" rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#f5f5f0" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#16171e" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <link rel="preconnect" href="https://jrqajnmudggfyghmyrun.supabase.co" crossorigin />
     <link rel="preconnect" href="https://oddczcritnsiahruqqaw.supabase.co" crossorigin />
-    <title>Diless</title>
-    <meta name="description" content="Markdown editor that helps you assemble messy ideas into structured writing through conversation" />
-    <meta property="og:title" content="Diless is an intelligent sermon preparation workspace" />
-    <meta property="og:description" content="Markdown editor that helps you assemble messy ideas into structured writing through conversation" />
+    <title>Diles</title>
+    <meta name="title" content="Diles" />
+    <meta name="description" content="Convierte tus apuntes en una gran exposición. El espacio para ordenar tus ideas, prepararte y exponer con confianza." />
+    <meta name="language" content="Spanish" />
+    <meta http-equiv="content-language" content="es-419" />
+
+    <!-- Open Graph / Facebook / WhatsApp -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://diless.vercel.app" />
-    <meta property="og:site_name" content="Diless" />
-    <meta property="og:image" content="https://diless.vercel.app/og-image.png" />
+    <meta property="og:url" content="https://diless.vercel.app/" />
+    <meta property="og:title" content="Diles" />
+    <meta property="og:description" content="Convierte tus apuntes en una gran exposición. El espacio para ordenar tus ideas, prepararte y exponer con confianza." />
+    <meta property="og:site_name" content="Diles" />
+    <meta property="og:image" content="https://diless.vercel.app/social-preview.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Diless is an intelligent sermon preparation workspace" />
-    <meta name="twitter:description" content="Markdown editor that helps you assemble messy ideas into structured writing through conversation" />
-    <meta name="twitter:image" content="https://diless.vercel.app/og-image.png" />
+
+    <!-- Twitter / X -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://diless.vercel.app/" />
+    <meta property="twitter:title" content="Diles" />
+    <meta property="twitter:description" content="Convierte tus apuntes en una gran exposición. El espacio para ordenar tus ideas, prepararte y exponer con confianza." />
+    <meta property="twitter:image" content="https://diless.vercel.app/social-preview.png" />
+    <script>
+      // Use a distinct favicon in local development
+      (function () {
+        try {
+          var host = window.location.hostname;
+          var isLocal = host === 'localhost' || host === '127.0.0.1';
+          if (!isLocal) return;
+          var favicon = document.getElementById('app-favicon');
+          if (favicon) favicon.setAttribute('href', '/local-favicon.png');
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
     <script>
       // Prevent theme flash — apply saved theme before first paint
       (function () {

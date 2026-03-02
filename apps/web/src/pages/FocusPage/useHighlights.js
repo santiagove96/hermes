@@ -12,6 +12,9 @@ const HIGHLIGHT_CLASSES = {
   evidence: 'highlight-evidence',
   wordiness: 'highlight-wordiness',
   factcheck: 'highlight-factcheck',
+  spoken: 'highlight-spoken',
+  intro: 'highlight-intro',
+  outro: 'highlight-outro',
 };
 
 /**

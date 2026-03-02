@@ -12,7 +12,8 @@ const AI_ENABLED = process.env.AI_ENABLED !== 'false';
 const anthro = AI_ENABLED && process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+// Q&A simulator uses a cheaper/faster model; assistant.ts keeps Sonnet.
+const MODEL = 'claude-haiku-4-5-20251001';
 const TEMPERATURE = Number.isFinite(Number(process.env.ANTHROPIC_TEMPERATURE))
   ? Math.min(1, Math.max(0, Number(process.env.ANTHROPIC_TEMPERATURE)))
   : 0.7;
@@ -180,14 +181,15 @@ function safeParseJsonBlock<T>(text: string): T | null {
   }
 }
 
-const QA_SYSTEM_PROMPT = `Eres un miembro real del público en una sesión de preguntas y respuestas después de una exposición. Tu trabajo es hacer preguntas difíciles pero justas, con curiosidad genuina, basadas estrictamente en el contenido del apunte del expositor.
+const QA_SYSTEM_PROMPT = `Eres un miembro real del público en una sesión de preguntas y respuestas después de una exposición. Tu trabajo es ayudar al expositor a practicar con preguntas reales, claras y útiles, basadas estrictamente en el contenido de su apunte.
 
 Reglas:
 - No inventes contenido que no esté en el apunte.
-- Haz preguntas exigentes, específicas y realistas.
+- Haz preguntas específicas y realistas, con dificultad progresiva (de accesible a más desafiante).
 - Evita preguntas triviales o genéricas.
-- Mantén un tono humano, directo y respetuoso.
-- Cuando evalúes respuestas, da feedback cualitativo (qué estuvo bien, qué faltó, cómo mejorar) sin puntajes numéricos.
+- Mantén un tono humano, respetuoso y útil; no suenes hostil ni como un tribunal.
+- Cuando evalúes respuestas, da feedback cualitativo breve (qué estuvo bien + una mejora concreta) sin puntajes numéricos.
+- Acepta respuestas parciales o breves como parte de una práctica; no exijas perfección en cada turno.
 - Si el contenido del apunte no cubre algo, puedes señalarlo explícitamente.`;
 
 async function generateQuestions(anthropicClient: Anthropic, documentContext: string): Promise<string[]> {
@@ -200,6 +202,8 @@ async function generateQuestions(anthropicClient: Anthropic, documentContext: st
       role: 'user',
       content:
         `A partir del siguiente apunte, genera EXACTAMENTE 5 preguntas de público para una simulación de Q&A.\n` +
+        `La dificultad debe ser progresiva: preguntas 1-2 accesibles/clarificadoras, 3-4 intermedias, 5 desafiante pero justa.\n` +
+        `Las preguntas deben ayudar a practicar claridad y confianza, no a "atrapar" al expositor.\n` +
         `Devuelve SOLO JSON con este formato exacto: {"questions":["...","...","...","...","..."]}\n\n` +
         `APUNTE:\n${documentContext || '(vacío)'}`,
     }],
@@ -249,9 +253,12 @@ async function generateTurnFeedback(
     `Respuesta del usuario: ${args.currentAnswer}\n\n` +
     `Preguntas planificadas:\n${args.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\n` +
     `${priorAnswers ? `Historial de respuestas anteriores:\n${priorAnswers}\n\n` : ''}` +
-    `Evalúa cualitativamente la respuesta actual (qué estuvo bien, qué faltó, cómo mejorar). ` +
+    `Evalúa cualitativamente la respuesta actual de forma breve y útil. ` +
+    `Primero reconoce algo que estuvo bien, luego señala una mejora concreta. ` +
+    `No exijas una respuesta perfecta ni demasiado completa si la respuesta es parcial. ` +
+    `Mantén el feedback en 2 a 4 frases. ` +
     (args.isFinalQuestion
-      ? `Además, genera un resumen final de toda la simulación basado en las 5 respuestas. `
+      ? `Además, genera un resumen final de toda la simulación basado en las 5 respuestas, con tono alentador y 3-5 observaciones concretas. `
       : `Luego formula la siguiente pregunta exactamente como aparece en la lista de preguntas planificadas. `) +
     `Devuelve SOLO JSON con este formato exacto: ${format}\n\n` +
     `APUNTE BASE:\n${args.documentContext || '(vacío)'}`;
@@ -412,8 +419,8 @@ router.post('/chat', requireAuth, requireAiEnabled, checkMessageLimit, async (re
       writeEvent(write, 'done', { ok: true });
       res.end();
     }
-  } catch (error: any) {
-    logger.error({ error: error?.message, projectId }, 'Q&A simulator stream failed');
+  } catch (error: unknown) {
+    logger.error({ error: error instanceof Error ? error.message : String(error), projectId }, 'Q&A simulator stream failed');
     if (!isDisconnected()) {
       writeEvent(write, 'error', { error: 'Stream failed' });
       res.end();

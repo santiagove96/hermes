@@ -1,9 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ReadingSizeContext } from './reading-size-context';
 
 const STORAGE_KEY = 'diless-reading-size';
 const DEFAULT_SIZE = 'small';
-
-const ReadingSizeContext = createContext(null);
 
 function getInitialReadingSize() {
   try {
@@ -35,10 +34,4 @@ export function ReadingSizeProvider({ children }) {
   }), [readingSize]);
 
   return <ReadingSizeContext.Provider value={value}>{children}</ReadingSizeContext.Provider>;
-}
-
-export function useReadingSizeContext() {
-  const context = useContext(ReadingSizeContext);
-  if (!context) throw new Error('useReadingSizeContext must be used within a ReadingSizeProvider');
-  return context;
 }

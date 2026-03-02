@@ -82,6 +82,7 @@ export default function LoginPage() {
             className={styles.input}
             required
             autoFocus
+            autoComplete="email"
           />
         </label>
         <label className={styles.label}>
@@ -92,6 +93,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className={styles.input}
             required
+            autoComplete="current-password"
           />
         </label>
         <button

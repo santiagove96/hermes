@@ -83,15 +83,12 @@ export default function AuthProvider({ children }) {
   // Activate pending trial after Google OAuth redirect
   useEffect(() => {
     if (!session?.access_token) return;
-    const pending = sessionStorage.getItem('pendingTrialDays');
+    const pending = sessionStorage.getItem('pendingTrialToken');
     if (!pending) return;
-    sessionStorage.removeItem('pendingTrialDays');
-    const days = parseInt(pending, 10);
-    if (days > 0) {
-      activateTrial(days, session.access_token).catch(() => {
-        // Non-fatal — trial activation is best-effort
-      });
-    }
+    sessionStorage.removeItem('pendingTrialToken');
+    activateTrial(pending, session.access_token).catch(() => {
+      // Non-fatal — trial activation is best-effort
+    });
   }, [session?.access_token]);
 
   const signIn = (email, password) =>

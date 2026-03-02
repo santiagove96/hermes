@@ -1,0 +1,125 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-xs-spacing);
+  font-weight: var(--weight-medium);
+  font-synthesis: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease;
+}
+
+.button:focus-visible,
+.isFocused:not(:disabled) {
+  outline: none;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.label,
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+}
+
+.spinner {
+  animation: button-spin 1s linear infinite;
+}
+
+.default {
+  background: var(--text-primary);
+  color: var(--bg-surface);
+  border: none;
+  box-shadow: var(--shadow-xs);
+}
+
+.default:hover:not(:disabled),
+.default.isHovered:not(:disabled) {
+  background: var(--text-muted);
+  color: var(--bg-surface);
+}
+
+.default:focus-visible:not(:disabled),
+.default.isFocused:not(:disabled) {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-soft),
+    var(--shadow-xs);
+}
+
+.outline {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-xs);
+}
+
+.outline:hover:not(:disabled),
+.outline.isHovered:not(:disabled) {
+  background: var(--bg-overlay);
+  color: var(--text-muted);
+}
+
+.outline:focus-visible:not(:disabled),
+.outline.isFocused:not(:disabled) {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-soft),
+    var(--shadow-xs);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.ghost:hover:not(:disabled),
+.ghost.isHovered:not(:disabled) {
+  background: var(--bg-overlay);
+  color: var(--text-muted);
+}
+
+.ghost:focus-visible:not(:disabled),
+.ghost.isFocused:not(:disabled) {
+  box-shadow: 0 0 0 2px var(--focus-ring-soft);
+}
+
+.sm {
+  padding-inline: 12px;
+}
+
+.iconOnly {
+  gap: 0;
+  padding: 7px;
+}
+
+.isDisabled {
+  pointer-events: none;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

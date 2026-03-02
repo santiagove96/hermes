@@ -74,8 +74,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
   let event: Stripe.Event;
   try {
     event = stripe!.webhooks.constructEvent(req.body, sig, webhookSecret!);
-  } catch (err: any) {
-    logger.warn({ error: err?.message }, 'Stripe webhook signature verification failed');
+  } catch (err: unknown) {
+    logger.warn({ error: err instanceof Error ? err.message : String(err) }, 'Stripe webhook signature verification failed');
     res.status(400).json({ error: 'Webhook signature verification failed' });
     return;
   }
@@ -230,8 +230,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
     }
 
     res.json({ received: true });
-  } catch (err: any) {
-    logger.error({ error: err?.message, eventId: event.id }, 'Webhook processing failed');
+  } catch (err: unknown) {
+    logger.error({ error: err instanceof Error ? err.message : String(err), eventId: event.id }, 'Webhook processing failed');
     // Delete the idempotency record so it can be retried
     await supabase.from('processed_stripe_events').delete().eq('event_id', event.id);
     res.status(500).json({ error: 'Webhook processing failed' });
@@ -261,8 +261,8 @@ router.post('/portal', requireAuth, async (req: Request, res: Response) => {
     });
 
     res.json({ url: portalSession.url });
-  } catch (err: any) {
-    logger.error({ error: err?.message, userId }, 'Failed to create portal session');
+  } catch (err: unknown) {
+    logger.error({ error: err instanceof Error ? err.message : String(err), userId }, 'Failed to create portal session');
     res.status(500).json({ error: 'Failed to create billing portal session' });
   }
 });

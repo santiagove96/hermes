@@ -7,6 +7,10 @@ import EnvironmentBanner from './components/EnvironmentBanner/EnvironmentBanner'
 
 const FocusPage = lazy(() => import('./pages/FocusPage/FocusPage'));
 const ReadPage = lazy(() => import('./pages/ReadPage/ReadPage'));
+const HomePage = lazy(() => import('./pages/HomePage/HomePage'));
+const ButtonPreviewPage = lazy(() => import('./pages/ButtonPreviewPage/ButtonPreviewPage'));
+const AvatarPreviewPage = lazy(() => import('./pages/AvatarPreviewPage/AvatarPreviewPage'));
+const NavbarPreviewPage = lazy(() => import('./pages/NavbarPreviewPage/NavbarPreviewPage'));
 const AuthConfirmPage = lazy(() => import('./pages/AuthConfirmPage/AuthConfirmPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage/ResetPasswordPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage/SignupPage'));
@@ -25,12 +29,12 @@ function NotFound() {
 function RedirectToLatestProject() {
   const { session } = useAuth();
   const navigate = useNavigate();
-  const [fallback, setFallback] = useState(false);
+  const [showHome, setShowHome] = useState(false);
 
   useEffect(() => {
     if (!session?.user?.id) {
-      // Not logged in — show the editor with no project (freeform mode)
-      setFallback(true);
+      // Not logged in — show read-only public home article
+      setShowHome(true);
       return;
     }
 
@@ -38,63 +42,30 @@ function RedirectToLatestProject() {
 
     (async () => {
       try {
-        const { fetchWritingProjects, createWritingProject, seedEssayProject, seedWelcomeProject, WELCOME_PAGES } = await import('@hermes/api');
+        const { fetchWritingProjects, createWritingProject } = await import('@hermes/api');
         const projects = await fetchWritingProjects();
         if (cancelled) return;
 
         if (projects.length > 0) {
           navigate(`/projects/${projects[0].id}`, { replace: true });
         } else {
-          // First login — seed Welcome + Essay projects in background,
-          // then create a starter project and navigate to it
-          let customPages;
-          try {
-            const raw = localStorage.getItem('hermes-welcome-pages');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                const hasCustomContent = Object.keys(parsed).some(
-                  (key) => parsed[key] !== (WELCOME_PAGES[key] ?? ''),
-                );
-                if (hasCustomContent) customPages = parsed;
-              }
-            }
-          } catch { /* malformed localStorage — fall through to default seed */ }
-
-          let seededCustomPages = false;
-          try { await seedWelcomeProject(session.user.id, customPages); seededCustomPages = !!customPages; } catch { /* continue */ }
-          try { await seedEssayProject(session.user.id); } catch { /* continue */ }
-          if (cancelled) return;
-
-          // Clean up localStorage after successful migration
-          if (seededCustomPages) {
-            try { localStorage.removeItem('hermes-welcome-pages'); } catch { /* ignore */ }
-          }
-
-          // Create a starter project and land on it
+          // First login — create a blank project and land on it.
           const starterProject = await createWritingProject(
-            'Mi primer sermón',
+            '',
             session.user.id,
-            {
-              subtitle: 'Tema, texto base y objetivo del mensaje',
-              pages: {
-                coral: 'Empieza a preparar tu sermón aquí.\n\nEste texto es temporal y luego lo reemplazaremos por tu flujo final de sermones.',
-              },
-            },
           );
           if (cancelled) return;
           navigate(`/projects/${starterProject.id}`, { replace: true });
         }
       } catch {
-        if (!cancelled) setFallback(true);
+        if (!cancelled) setShowHome(true);
       }
     })();
 
     return () => { cancelled = true; };
   }, [session, navigate]);
 
-  // Non-logged-in users get the editor with no project
-  if (fallback) return <FocusPage />;
+  if (showHome) return <HomePage />;
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -104,6 +75,25 @@ function RedirectToLatestProject() {
       </div>
     </main>
   );
+}
+
+function ProjectRoute() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ width: '40%', height: 24, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+          <div style={{ width: '80%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+          <div style={{ width: '60%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
+        </div>
+      </main>
+    );
+  }
+
+  if (!session) return <Navigate to="/" replace />;
+  return <FocusPage />;
 }
 
 export default function App() {
@@ -121,7 +111,10 @@ export default function App() {
       }>
         <Routes>
           <Route path="/" element={<RedirectToLatestProject />} />
-          <Route path="/projects/:projectId" element={<FocusPage />} />
+          <Route path="/preview/button" element={<ButtonPreviewPage />} />
+          <Route path="/preview/avatar" element={<AvatarPreviewPage />} />
+          <Route path="/preview/navbar" element={<NavbarPreviewPage />} />
+          <Route path="/projects/:projectId" element={<ProjectRoute />} />
           <Route path="/read/:shortId/:slug" element={<ReadPage />} />
           <Route path="/read/:shortId" element={<ReadPage />} />
           <Route path="/login" element={<LoginPage />} />

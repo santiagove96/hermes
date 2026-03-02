@@ -17,9 +17,10 @@
   padding: 0;
   cursor: pointer;
   font-family: var(--font-ui);
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
   color: var(--text-dim);
-  line-height: 1;
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
   transition: color 150ms ease;
 }
 
@@ -60,8 +61,10 @@
 
 .sep {
   color: var(--text-dim);
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
   font-family: var(--font-ui);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
 }
 
 .titleWrap {
@@ -72,9 +75,14 @@
 }
 
 .projectTitle {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--text-sm-line);
   color: var(--text-primary);
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
   font-family: var(--font-ui);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,7 +98,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  box-shadow: 0 4px 12px var(--focus-ring-soft);
+  box-shadow: var(--shadow-md);
   z-index: 300;
   overflow: hidden;
 }
@@ -124,8 +132,7 @@
   background: none;
   cursor: pointer;
   color: var(--text-dim);
-  font-size: 15px;
-  line-height: 1;
+  line-height: var(--text-xs-line);
   transition: color 150ms ease, border-color 150ms ease;
 }
 
@@ -176,8 +183,13 @@
 }
 
 .projectItemTitle {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--text-sm-line);
   font-family: var(--font-ui);
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
   color: var(--text-primary);
   margin: 0;
   overflow: hidden;
@@ -186,8 +198,13 @@
 }
 
 .projectItemTime {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--text-xs-line);
   font-family: var(--font-ui);
-  font-size: var(--type-ui-caption-size);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-line);
+  letter-spacing: var(--text-xs-spacing);
   color: var(--text-dim);
   margin: 2px 0 0;
 }
@@ -216,6 +233,10 @@
   transition: background 100ms ease, color 100ms ease;
 }
 
+.actionIconBtn svg {
+  display: block;
+}
+
 .actionIconBtn:hover {
   background: var(--hover-medium);
   color: var(--text-primary);
@@ -236,8 +257,8 @@
   border-radius: 3px;
   background: var(--bg-base);
   font-family: var(--font-ui);
-  font-size: var(--type-ui-input-size);
-  line-height: var(--type-ui-input-line);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
   color: var(--text-primary);
   outline: none;
   box-sizing: content-box;
@@ -254,7 +275,9 @@
 
 .confirmLabel {
   font-family: var(--font-ui);
-  font-size: var(--type-ui-meta-size);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
   color: var(--text-muted);
   margin: 0 0 6px;
 }
@@ -271,7 +294,9 @@
   border-radius: 4px;
   background: none;
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-line);
+  letter-spacing: var(--text-xs-spacing);
   cursor: pointer;
   transition: background 100ms ease;
 }
@@ -301,7 +326,9 @@
   border: none;
   border-top: 1px solid var(--border-subtle);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-line);
+  letter-spacing: var(--text-xs-spacing);
   color: var(--text-dim);
   cursor: pointer;
   text-align: center;
@@ -315,16 +342,16 @@
 /* Loading / empty states */
 .menuLoading {
   padding: 16px 12px;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--text-dim);
-  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 .menuEmpty {
   padding: 16px 12px;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-line);
+  letter-spacing: var(--text-xs-spacing);
   color: var(--text-dim);
   text-align: center;
 }

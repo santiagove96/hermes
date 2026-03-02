@@ -1,3 +1,4 @@
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod/v4';
 import rateLimit from 'express-rate-limit';
@@ -29,8 +30,89 @@ const UseInviteSchema = z.object({
 });
 
 const ActivateTrialSchema = z.object({
-  trialDays: z.number().int().min(1).max(365),
+  trialToken: z.string().trim().min(1),
 });
+
+const TRIAL_TOKEN_TTL_MS = 30 * 60 * 1000;
+const trialTokenStore = new Map<string, number>();
+
+function pruneTrialTokenStore(now = Date.now()) {
+  for (const [nonce, expiresAt] of trialTokenStore.entries()) {
+    if (expiresAt <= now) {
+      trialTokenStore.delete(nonce);
+    }
+  }
+}
+
+function getTrialTokenSecret() {
+  const secret = process.env.AUTH_TRIAL_TOKEN_SECRET || process.env.SUPABASE_SERVICE_KEY;
+  if (!secret) {
+    throw new Error('AUTH_TRIAL_TOKEN_SECRET or SUPABASE_SERVICE_KEY is required');
+  }
+  return secret;
+}
+
+function signTrialToken(trialDays: number) {
+  const exp = Date.now() + TRIAL_TOKEN_TTL_MS;
+  const nonce = randomUUID();
+  pruneTrialTokenStore(exp - TRIAL_TOKEN_TTL_MS);
+  trialTokenStore.set(nonce, exp);
+  const payload = Buffer.from(JSON.stringify({
+    trialDays,
+    exp,
+    nonce,
+  })).toString('base64url');
+  const signature = createHmac('sha256', getTrialTokenSecret())
+    .update(payload)
+    .digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyTrialToken(token: string) {
+  pruneTrialTokenStore();
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return null;
+
+  const expected = createHmac('sha256', getTrialTokenSecret())
+    .update(payload)
+    .digest('base64url');
+
+  const providedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (
+    providedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(providedBuffer, expectedBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      trialDays?: number;
+      exp?: number;
+      nonce?: string;
+    };
+    if (
+      !Number.isInteger(decoded.trialDays) ||
+      decoded.trialDays! < 1 ||
+      decoded.trialDays! > 365 ||
+      !Number.isFinite(decoded.exp) ||
+      decoded.exp! < Date.now() ||
+      typeof decoded.nonce !== 'string' ||
+      !decoded.nonce
+    ) {
+      return null;
+    }
+    const storedExp = trialTokenStore.get(decoded.nonce);
+    if (!storedExp || storedExp !== decoded.exp) {
+      return null;
+    }
+    trialTokenStore.delete(decoded.nonce);
+    return decoded.trialDays!;
+  } catch {
+    return null;
+  }
+}
 
 // POST /api/auth/validate-invite
 // Check if an invite code is valid (does NOT increment usage)
@@ -145,7 +227,11 @@ router.post('/use-invite', useInviteLimit, async (req: Request, res: Response) =
   }
 
   const trialDays = trialResult as number;
-  res.json({ success: true, trialDays });
+  res.json({
+    success: true,
+    trialDays,
+    trialToken: trialDays > 0 ? signTrialToken(trialDays) : null,
+  });
 });
 
 // POST /api/auth/activate-trial
@@ -158,7 +244,11 @@ router.post('/activate-trial', requireAuth, async (req: Request, res: Response) 
   }
 
   const userId = req.user!.id;
-  const { trialDays } = parsed.data;
+  const trialDays = verifyTrialToken(parsed.data.trialToken);
+  if (!trialDays) {
+    res.status(400).json({ error: 'Invalid or expired trial token' });
+    return;
+  }
 
   // Idempotent: skip if trial_expires_at is already set
   const { data: profile } = await supabase

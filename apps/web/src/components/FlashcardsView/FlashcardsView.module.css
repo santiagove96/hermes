@@ -1,0 +1,294 @@
+.overlay {
+  position: fixed;
+  inset: 46px 0 0;
+  z-index: 120;
+  pointer-events: none;
+}
+
+.inner {
+  height: 100%;
+  overflow-y: auto;
+  pointer-events: auto;
+  padding: 18px 24px 48px;
+}
+
+.topBar {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+  max-width: 680px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-surface) 90%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+}
+
+.leftGroup {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actionBtn,
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+  cursor: pointer;
+}
+
+.actionBtn:hover,
+.primaryBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--neutral-hover-border);
+}
+
+.actionBtn:disabled,
+.primaryBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.primaryBtn {
+  background: var(--bg-base);
+}
+
+.iconBtn {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+}
+
+.meta {
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs-size);
+  line-height: 16px;
+}
+
+.stack {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 80px;
+}
+
+.centerState,
+.centerStateCard {
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-surface) 96%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.centerState {
+  padding: 18px;
+  color: var(--text-dim);
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+}
+
+.centerStateCard {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.centerTitle {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-base);
+  line-height: 22px;
+  font-weight: var(--weight-medium);
+}
+
+.centerBody {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+}
+
+.cardWrap {
+  perspective: 1200px;
+}
+
+.cardWrapEmpty {
+  perspective: none;
+}
+
+.cardButton {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cardButton:disabled {
+  cursor: default;
+}
+
+.cardInner {
+  position: relative;
+  min-height: 170px;
+  transform-style: preserve-3d;
+  transition: transform 260ms ease;
+}
+
+.cardButtonFlipped .cardInner {
+  transform: rotateY(180deg);
+}
+
+.cardFace {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--fc-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fc-bg) 100%, var(--bg-surface)), var(--bg-surface));
+  border-radius: 16px;
+  padding: 16px;
+  backface-visibility: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardBack {
+  transform: rotateY(180deg);
+}
+
+.cardButtonEmpty .cardInner,
+.cardButtonEmpty .cardFace {
+  min-height: auto;
+  position: relative;
+}
+
+.cardButtonEmpty .cardBack {
+  display: none;
+}
+
+.cardIndex {
+  align-self: flex-start;
+  border-radius: 999px;
+  border: 1px solid var(--fc-border);
+  background: color-mix(in srgb, var(--fc-bg) 70%, var(--bg-surface));
+  color: var(--fc-text);
+  padding: 2px 8px;
+  font-family: var(--font-code);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.cardLabel {
+  color: var(--fc-text);
+  font-family: var(--font-code);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.cardFrontText,
+.cardBackText {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-base);
+  line-height: 22px;
+}
+
+.cardBackText {
+  color: var(--text-muted);
+}
+
+.error,
+.errorInline {
+  color: var(--danger);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs-size);
+  line-height: 16px;
+}
+
+.errorInline {
+  text-align: center;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    inset: 45px 0 0;
+  }
+
+  .inner {
+    padding: 12px 16px 28px;
+  }
+
+  .topBar {
+    top: 6px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    align-items: flex-start;
+  }
+
+  .leftGroup {
+    gap: 8px;
+  }
+
+  .actionBtn,
+  .primaryBtn {
+    padding: 8px 10px;
+  }
+
+  .cardFace {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .cardInner {
+    min-height: 156px;
+  }
+
+  .cardFrontText,
+  .cardBackText {
+    font-size: var(--text-sm-size);
+    line-height: var(--text-sm-line);
+  }
+}

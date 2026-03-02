@@ -39,23 +39,23 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  box-shadow: 0 4px 12px var(--focus-ring-soft);
+  box-shadow: var(--shadow-md);
   padding: 16px;
   z-index: 300;
   font-family: var(--font-ui);
 }
 
 .heading {
-  font-size: var(--type-ui-body-size);
-  font-weight: var(--weight-semi);
+  font-size: var(--text-sm-size);
+  font-weight: var(--weight-ibold);
   color: var(--text-primary);
   margin: 0 0 12px;
 }
 
 .label {
   display: block;
-  font-size: var(--type-ui-meta-size);
-  line-height: var(--type-ui-meta-line);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
   color: var(--text-dim);
   margin-bottom: 4px;
 }
@@ -63,8 +63,8 @@
 .input {
   width: 100%;
   padding: 6px 8px;
-  font-size: var(--type-ui-input-size);
-  line-height: var(--type-ui-input-line);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
   font-family: var(--font-ui);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
@@ -92,8 +92,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--type-ui-body-size);
-  line-height: var(--type-ui-body-line);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
   color: var(--text-muted);
   cursor: pointer;
 }
@@ -114,7 +114,7 @@
   display: block;
   width: 100%;
   padding: 8px;
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
   font-weight: 500;
   font-family: var(--font-ui);
   color: var(--text-inverse);
@@ -136,7 +136,7 @@
 }
 
 .note {
-  font-size: var(--type-ui-caption-size);
+  font-size: var(--text-xs-size);
   color: var(--text-dim);
   margin-top: 8px;
   text-align: center;
@@ -152,7 +152,7 @@
 .urlDisplay {
   flex: 1;
   padding: 6px 8px;
-  font-size: var(--type-ui-meta-size);
+  font-size: var(--text-sm-size);
   font-family: var(--font-code);
   background: var(--hover-soft);
   border: 1px solid var(--border-subtle);
@@ -165,7 +165,7 @@
 
 .copyBtn {
   padding: 6px 10px;
-  font-size: var(--type-ui-meta-size);
+  font-size: var(--text-sm-size);
   font-family: var(--font-ui);
   color: var(--text-muted);
   background: var(--bg-base);
@@ -183,7 +183,7 @@
 
 .openLink {
   display: inline-block;
-  font-size: var(--type-ui-meta-size);
+  font-size: var(--text-sm-size);
   color: var(--text-dim);
   text-decoration: underline;
   text-decoration-color: var(--underline-subtle);
@@ -199,7 +199,7 @@
   display: block;
   width: 100%;
   padding: 8px;
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
   font-weight: 500;
   font-family: var(--font-ui);
   color: var(--text-inverse);
@@ -221,7 +221,7 @@
 }
 
 .updateNote {
-  font-size: var(--type-ui-caption-size);
+  font-size: var(--text-xs-size);
   color: var(--success);
   margin-top: 6px;
   text-align: center;
@@ -231,7 +231,7 @@
   display: block;
   width: 100%;
   padding: 8px;
-  font-size: var(--type-ui-body-size);
+  font-size: var(--text-sm-size);
   font-family: var(--font-ui);
   color: var(--danger-alt);
   background: none;
@@ -248,7 +248,7 @@
 }
 
 .warning {
-  font-size: var(--type-ui-caption-size);
+  font-size: var(--text-xs-size);
   color: var(--danger-alt);
   margin-top: 6px;
   text-align: center;

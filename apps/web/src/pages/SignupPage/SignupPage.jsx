@@ -83,8 +83,8 @@ export default function SignupPage() {
     try {
       const result = await consumeInviteCode(inviteCode);
       posthog.capture('signup_completed', { method: 'google' });
-      if (result.trialDays > 0) {
-        sessionStorage.setItem('pendingTrialDays', String(result.trialDays));
+      if (result.trialToken) {
+        sessionStorage.setItem('pendingTrialToken', result.trialToken);
       }
       signInWithGoogle();
     } catch (err) {
@@ -169,10 +169,11 @@ export default function SignupPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={styles.input}
-            required
-            autoFocus
-          />
+              className={styles.input}
+              required
+              autoFocus
+              autoComplete="email"
+            />
         </label>
         <label className={styles.label}>
           Password
@@ -180,9 +181,10 @@ export default function SignupPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={styles.input}
-            required
-          />
+              className={styles.input}
+              required
+              autoComplete="new-password"
+            />
         </label>
         {password && (
           <div className={styles.requirements}>

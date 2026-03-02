@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import posthog from 'posthog-js';
 import { publishProject, unpublishProject, updatePublishSettings, generateSlug } from '@hermes/api';
 import useLanguage from '../../hooks/useLanguage';
@@ -24,6 +24,7 @@ export default function ShareButton({
   onPublishChange,
   isOpen,
   onOpenChange,
+  renderTrigger = null,
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -78,7 +79,10 @@ export default function ShareButton({
   // Single-canvas publish mode: always publish the primary canvas tab.
   const pages = getPages();
   const hasPublishableContent = !!pages[SINGLE_CANVAS_TAB]?.trim();
-  const publishTabs = hasPublishableContent ? [SINGLE_CANVAS_TAB] : [];
+  const publishTabs = useMemo(
+    () => (hasPublishableContent ? [SINGLE_CANVAS_TAB] : []),
+    [hasPublishableContent],
+  );
 
   const handlePublish = useCallback(async () => {
     if (!projectId || publishing) return;
@@ -165,13 +169,20 @@ export default function ShareButton({
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
-      <button
-        className={`${styles.trigger} ${published ? styles.triggerPublished : ''}`}
-        onClick={() => setOpen((v) => !v)}
-        title={published ? t('shareButton.managePublishedPost') : t('shareButton.sharePost')}
-      >
-        {shareIcon}
-      </button>
+      {renderTrigger ? renderTrigger({
+        open,
+        toggleOpen: () => setOpen((v) => !v),
+        published,
+        title: published ? t('shareButton.managePublishedPost') : t('shareButton.sharePost'),
+      }) : (
+        <button
+          className={`${styles.trigger} ${published ? styles.triggerPublished : ''}`}
+          onClick={() => setOpen((v) => !v)}
+          title={published ? t('shareButton.managePublishedPost') : t('shareButton.sharePost')}
+        >
+          {shareIcon}
+        </button>
+      )}
 
       {open && (
         <div className={styles.panel}>

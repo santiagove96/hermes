@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import posthog from 'posthog-js';
+import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { fetchWritingProjects, fetchWritingProject, createWritingProject, updateWritingProject, deleteWritingProject } from '@hermes/api';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
+import DotGridLoader from '../../components/DotGridLoader/DotGridLoader';
 import styles from './ProjectSwitcher.module.css';
 
 const INITIAL_VISIBLE = 3;
@@ -14,19 +16,31 @@ function formatRelativeTimeLocalized(isoDate, language) {
 
   const diffSeconds = Math.round((target - Date.now()) / 1000);
   const absSeconds = Math.abs(diffSeconds);
-  const locale = language === 'es' ? 'es' : 'en';
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  const isEs = language === 'es';
 
-  if (absSeconds < 60) return rtf.format(diffSeconds, 'second');
-  if (absSeconds < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
-  if (absSeconds < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
-  if (absSeconds < 604800) return rtf.format(Math.round(diffSeconds / 86400), 'day');
-  if (absSeconds < 2629800) return rtf.format(Math.round(diffSeconds / 604800), 'week');
-  if (absSeconds < 31557600) return rtf.format(Math.round(diffSeconds / 2629800), 'month');
-  return rtf.format(Math.round(diffSeconds / 31557600), 'year');
+  const formatAbbrev = (value, esUnit, enUnit) => {
+    const abs = Math.abs(value);
+    if (isEs) return `hace ${abs} ${esUnit}`;
+    return `${abs}${enUnit} ago`;
+  };
+
+  if (absSeconds < 60) return formatAbbrev(diffSeconds, 'seg', 's');
+  if (absSeconds < 3600) return formatAbbrev(Math.round(diffSeconds / 60), 'min', 'm');
+  if (absSeconds < 86400) return formatAbbrev(Math.round(diffSeconds / 3600), 'h', 'h');
+  if (absSeconds < 604800) return formatAbbrev(Math.round(diffSeconds / 86400), 'd', 'd');
+  if (absSeconds < 2629800) return formatAbbrev(Math.round(diffSeconds / 604800), 'sem', 'w');
+  if (absSeconds < 31557600) return formatAbbrev(Math.round(diffSeconds / 2629800), 'mes', 'mo');
+  return formatAbbrev(Math.round(diffSeconds / 31557600), 'año', 'y');
 }
 
-export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpen, onDropdownClose, onProjectRenamed }) {
+export default function ProjectSwitcher({
+  projectId,
+  projectTitle,
+  onDropdownOpen,
+  onDropdownClose,
+  onProjectRenamed,
+  renderTrigger = null,
+}) {
   const { session } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
@@ -107,7 +121,7 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
     if (creating || !session?.user?.id) return;
     setCreating(true);
     try {
-      const project = await createWritingProject(t('projectSwitcher.newProject'), session.user.id);
+      const project = await createWritingProject('', session.user.id);
       posthog.capture('project_created');
       closeDropdown();
       navigate(`/projects/${project.id}`);
@@ -233,7 +247,7 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
             />
           ) : (
             <>
-              <div className={styles.projectItemTitle}>{p.title || t('projectSwitcher.newProject')}</div>
+              <div className={styles.projectItemTitle}>{p.title || 'Di algo...'}</div>
               <div className={styles.projectItemTime}>{t('projectSwitcher.updatedAgo', { time: formatRelativeTimeLocalized(p.updatedAt, language) })}</div>
             </>
           )}
@@ -245,21 +259,14 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
             onClick={(e) => startRename(e, p)}
             title={t('projectSwitcher.rename')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-              <path d="m15 5 4 4" />
-            </svg>
+            <PencilSimple size={14} weight="regular" />
           </button>
           <button
             className={`${styles.actionIconBtn} ${styles.actionIconDanger}`}
             onClick={(e) => startDelete(e, p.id)}
             title={t('projectSwitcher.delete')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
+            <Trash size={14} weight="regular" />
           </button>
         </div>
       </div>
@@ -268,35 +275,43 @@ export default function ProjectSwitcher({ projectId, projectTitle, onDropdownOpe
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <div className={styles.trigger}>
-        <button className={styles.triggerBtn} onClick={toggleDropdown}>
-          <span className={styles.labelDefault}>Diless</span>
-          <span className={styles.labelHover}>{t('projectSwitcher.projects')}</span>
-        </button>
-        <span className={styles.sep}>/</span>
-        <span className={styles.titleWrap}>
-          <span className={styles.projectTitle}>
-            {projectTitle || t('projectSwitcher.newProject')}
+      {renderTrigger ? renderTrigger({
+        open,
+        toggleDropdown,
+        projectTitle: projectTitle || 'Di algo...',
+      }) : (
+        <div className={styles.trigger}>
+          <button className={styles.triggerBtn} onClick={toggleDropdown}>
+            <span className={styles.labelDefault}>Diless</span>
+            <span className={styles.labelHover}>{t('projectSwitcher.projects')}</span>
+          </button>
+          <span className={styles.sep}>/</span>
+          <span className={styles.titleWrap}>
+            <span className={styles.projectTitle}>
+              {projectTitle || 'Di algo...'}
+            </span>
           </span>
-        </span>
-      </div>
+        </div>
+      )}
 
       {open && (
         <div className={styles.menu}>
           <div className={styles.menuHeader}>
             <span className={styles.menuHeaderLabel}>{t('projectSwitcher.projects')}</span>
             <button
-              className={styles.createBtn}
-              onClick={handleCreate}
-              disabled={creating}
-              title={t('projectSwitcher.createNewProject')}
-            >
-              +
+            className={styles.createBtn}
+            onClick={handleCreate}
+            disabled={creating}
+            title={t('projectSwitcher.createNewProject')}
+          >
+              <Plus size={14} weight="regular" />
             </button>
           </div>
 
           {projects === null ? (
-            <div className={styles.menuLoading}>{t('projectSwitcher.loading')}</div>
+            <div className={styles.menuLoading}>
+              <DotGridLoader />
+            </div>
           ) : sortedProjects.length === 0 ? (
             <div className={styles.menuEmpty}>{t('projectSwitcher.noProjects')}</div>
           ) : (

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { X } from '@phosphor-icons/react';
 import posthog from 'posthog-js';
 import { fetchAssistantConversation, startAssistantStream } from '@hermes/api';
 import useUsage from '../../hooks/useUsage';
@@ -237,7 +238,7 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
       setStreaming(false);
       setToolStatus(null);
     }
-  }, [input, streaming, session, projectId, getPages, activeTab, onHighlights, refreshUsage]);
+  }, [input, streaming, session, projectId, getPages, activeTab, onHighlights, refreshUsage, messages.length]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -295,7 +296,7 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
           onClick={() => setExpanded(false)}
           aria-label="Minimize assistant"
         >
-          —
+          <X size={24} weight="regular" />
         </button>
       </div>
 

@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { LanguageContext } from './language-context';
 
 const STORAGE_KEY = 'diless-language';
 const DEFAULT_LANGUAGE = 'es';
@@ -170,8 +171,6 @@ function interpolate(template, vars) {
   return template.replace(/\{(\w+)\}/g, (_, key) => (vars[key] ?? `{${key}}`));
 }
 
-const LanguageContext = createContext(null);
-
 export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState(getInitialLanguage);
 
@@ -196,10 +195,4 @@ export function LanguageProvider({ children }) {
   const value = useMemo(() => ({ language, setLanguage, toggleLanguage, t }), [language, toggleLanguage, t]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-}
-
-export function useLanguageContext() {
-  const context = useContext(LanguageContext);
-  if (!context) throw new Error('useLanguageContext must be used within a LanguageProvider');
-  return context;
 }

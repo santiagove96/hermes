@@ -2,6 +2,16 @@ import { getSupabase } from './supabase';
 import { getPlatform } from './config';
 import { getDataSource } from './dataSource';
 import { ESSAY_TITLE, ESSAY_SUBTITLE, ESSAY_PAGES } from './essay-seed';
+import {
+  HOME_ADMIN_EMAIL,
+  HOME_AUTHOR_NAME,
+  HOME_PAGES,
+  HOME_PUBLISHED_TABS,
+  HOME_SHORT_ID,
+  HOME_SLUG,
+  HOME_SUBTITLE,
+  HOME_TITLE,
+} from './home-seed';
 import { WELCOME_TITLE, WELCOME_PAGES } from './welcome-seed';
 
 // --- In-memory cache ---
@@ -100,6 +110,72 @@ export interface PublishedEssay {
   slug: string;
 }
 
+async function ensureAdminHomeProject(user: { id: string; email?: string | null }): Promise<void> {
+  if ((user.email || '').toLowerCase() !== HOME_ADMIN_EMAIL) return;
+
+  const { data, error } = await getSupabase()
+    .from('projects')
+    .select('*')
+    .eq('user_id', user.id)
+    .or(`short_id.eq.${HOME_SHORT_ID},slug.eq.${HOME_SLUG},title.eq.${HOME_TITLE}`)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+
+  const existing = (data?.[0] as WritingProjectRow | undefined) ?? null;
+  const timestamp = new Date().toISOString();
+
+  if (!existing) {
+    const { error: insertError } = await getSupabase()
+      .from('projects')
+      .insert({
+        user_id: user.id,
+        title: HOME_TITLE,
+        subtitle: HOME_SUBTITLE,
+        status: 'complete',
+        pages: HOME_PAGES,
+        published: true,
+        short_id: HOME_SHORT_ID,
+        slug: HOME_SLUG,
+        author_name: HOME_AUTHOR_NAME,
+        published_tabs: HOME_PUBLISHED_TABS,
+        published_pages: HOME_PAGES,
+        published_at: timestamp,
+      });
+
+    if (insertError) throw insertError;
+    projectListCache = null;
+    return;
+  }
+
+  const updates: Record<string, unknown> = {};
+
+  if (!existing.short_id) updates.short_id = HOME_SHORT_ID;
+  if (!existing.slug) updates.slug = HOME_SLUG;
+  if (!existing.published) updates.published = true;
+  if (!existing.author_name) updates.author_name = HOME_AUTHOR_NAME;
+  if (!existing.subtitle) updates.subtitle = HOME_SUBTITLE;
+  if (!existing.pages || !Object.values(existing.pages).some((value) => String(value || '').trim())) {
+    updates.pages = HOME_PAGES;
+  }
+  if (!existing.published_tabs?.length) updates.published_tabs = HOME_PUBLISHED_TABS;
+  if (!existing.published_pages || !Object.values(existing.published_pages).some((value) => String(value || '').trim())) {
+    updates.published_pages = existing.pages || HOME_PAGES;
+  }
+  if (!existing.published_at) updates.published_at = timestamp;
+
+  if (!Object.keys(updates).length) return;
+
+  const { error: updateError } = await getSupabase()
+    .from('projects')
+    .update(updates)
+    .eq('id', existing.id);
+
+  if (updateError) throw updateError;
+  invalidateProject(existing.id);
+}
+
 export interface AssistantMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -109,11 +185,19 @@ export interface AssistantMessage {
 
 export interface Highlight {
   id: string;
-  type: 'question' | 'suggestion' | 'edit' | 'voice' | 'weakness' | 'evidence' | 'wordiness' | 'factcheck';
+  type: 'question' | 'suggestion' | 'edit' | 'voice' | 'weakness' | 'evidence' | 'wordiness' | 'factcheck' | 'spoken' | 'intro' | 'outro';
   matchText: string;
   comment: string;
   suggestedEdit?: string;
   dismissed?: boolean;
+}
+
+export type AnalyzeLevel = 'curioso' | 'comprometido' | 'exigente';
+
+export interface AnalyzeUsageInfo {
+  hasActiveSubscription: boolean;
+  remainingFreeAnalyses: number;
+  usedFreeAnalyses?: number;
 }
 
 function normalizeBaseUrl(url: string): string {
@@ -160,6 +244,8 @@ export async function fetchWritingProjects(): Promise<WritingProject[]> {
 
   const { data: { user } } = await getSupabase().auth.getUser();
   if (!user) throw new Error('Not authenticated');
+
+  await ensureAdminHomeProject(user);
 
   const { data, error } = await getSupabase()
     .from('projects')
@@ -307,6 +393,33 @@ export async function saveProjectPages(projectId: string, pages: Record<string, 
   invalidateProject(projectId);
 }
 
+export async function saveProjectPagesWithOptions(
+  projectId: string,
+  pages: Record<string, string>,
+  options?: { syncPublished?: boolean },
+): Promise<void> {
+  const ds = getDataSource();
+  if (ds) return ds.savePages(projectId, pages);
+
+  const updates: Record<string, unknown> = { pages };
+  if (options?.syncPublished) {
+    updates.published = true;
+    updates.short_id = HOME_SHORT_ID;
+    updates.slug = HOME_SLUG;
+    updates.published_tabs = HOME_PUBLISHED_TABS;
+    updates.published_pages = pages;
+    updates.published_at = new Date().toISOString();
+  }
+
+  const { error } = await getSupabase()
+    .from('projects')
+    .update(updates)
+    .eq('id', projectId);
+
+  if (error) throw error;
+  invalidateProject(projectId);
+}
+
 export async function saveProjectContent(projectId: string, content: string): Promise<void> {
   const ds = getDataSource();
   if (ds) return ds.saveContent(projectId, content);
@@ -406,6 +519,59 @@ export async function startAssistantStream(
   }
 
   return res;
+}
+
+export async function startAnalyzeStream(
+  projectId: string,
+  pages: Record<string, string>,
+  activeTab: string,
+  level: AnalyzeLevel,
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<Response> {
+  const baseUrl = normalizeBaseUrl(getPlatform().serverBaseUrl);
+  const res = await fetch(`${baseUrl}/api/analyze`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ projectId, pages, activeTab, level }),
+    signal,
+  });
+
+  if (!res.ok) {
+    const err: Error & {
+      status?: number;
+      code?: string;
+      remainingFreeAnalyses?: number;
+      hasActiveSubscription?: boolean;
+      serverMessage?: string;
+    } = new Error('Failed to stream analyze response');
+    err.status = res.status;
+    try {
+      const body = await res.json();
+      err.code = body.code;
+      err.remainingFreeAnalyses = body.remainingFreeAnalyses;
+      err.hasActiveSubscription = body.hasActiveSubscription;
+      err.serverMessage = body.message;
+    } catch {
+      // Response wasn't JSON
+    }
+    throw err;
+  }
+
+  return res;
+}
+
+export async function fetchAnalyzeUsage(accessToken: string): Promise<AnalyzeUsageInfo> {
+  const baseUrl = normalizeBaseUrl(getPlatform().serverBaseUrl);
+  const res = await fetch(`${baseUrl}/api/analyze/usage`, {
+    headers: authHeaders(accessToken),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch analyze usage');
+  }
+
+  return res.json();
 }
 
 // --- Publishing ---
@@ -515,6 +681,28 @@ export async function fetchPublishedEssay(shortId: string): Promise<PublishedEss
     shortId: data.short_id,
     slug: data.slug,
   };
+}
+
+export function getFallbackHomeEssay(): PublishedEssay {
+  return {
+    title: HOME_TITLE,
+    subtitle: HOME_SUBTITLE,
+    authorName: HOME_AUTHOR_NAME,
+    pages: HOME_PAGES,
+    publishedTabs: HOME_PUBLISHED_TABS,
+    publishedAt: new Date(0).toISOString(),
+    shortId: HOME_SHORT_ID,
+    slug: HOME_SLUG,
+  };
+}
+
+export async function fetchHomeEssay(): Promise<PublishedEssay> {
+  try {
+    const essay = await fetchPublishedEssay(HOME_SHORT_ID);
+    return essay || getFallbackHomeEssay();
+  } catch {
+    return getFallbackHomeEssay();
+  }
 }
 
 export async function updatePublishSettings(

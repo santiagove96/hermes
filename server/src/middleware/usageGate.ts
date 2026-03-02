@@ -11,13 +11,17 @@ const UNLIMITED_EMAILS = new Set([
     .filter(Boolean)),
 ]);
 
+export function hasUnlimitedUsageEmail(email?: string | null): boolean {
+  return !!email && UNLIMITED_EMAILS.has(email.toLowerCase());
+}
+
 export async function checkMessageLimit(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
   const userEmail = req.user?.email?.toLowerCase();
 
   // Local/admin bypass: unlimited usage for selected emails.
   // We still attach usageInfo so downstream routes/UI behave like a Pro user.
-  if (userEmail && UNLIMITED_EMAILS.has(userEmail)) {
+  if (hasUnlimitedUsageEmail(userEmail)) {
     req.usageInfo = {
       plan: 'pro',
       used: 0,
@@ -132,8 +136,8 @@ export async function checkMessageLimit(req: Request, res: Response, next: NextF
     };
 
     next();
-  } catch (err: any) {
-    logger.error({ error: err?.message, userId }, 'Usage gate check failed');
+  } catch (err: unknown) {
+    logger.error({ error: err instanceof Error ? err.message : String(err), userId }, 'Usage gate check failed');
     res.status(503).json({ error: 'Unable to verify usage limits. Please try again.' });
   }
 }

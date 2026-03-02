@@ -10,6 +10,9 @@ const TYPE_LABELS = {
   evidence: 'Evidence',
   wordiness: 'Wordiness',
   factcheck: 'Fact Check',
+  spoken: 'Spoken',
+  intro: 'Intro',
+  outro: 'Outro',
 };
 
 export default memo(function HighlightPopover({

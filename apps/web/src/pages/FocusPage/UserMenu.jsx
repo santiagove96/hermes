@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import posthog from 'posthog-js';
 import { createPortalSession } from '@hermes/api';
 import { supabase } from '../../lib/supabase';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
 import useUsage from '../../hooks/useUsage';
+import Avatar from '../../components/ui/Avatar';
 import McpSettingsView from './McpSettingsView';
 import styles from './UserMenu.module.css';
 
@@ -118,8 +119,9 @@ const USER_MENU_TEXT = {
   },
 };
 
-export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
+export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigger = null }) {
   const { session, signIn, signInWithGoogle, signOut, updatePassword } = useAuth();
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const { usage } = useUsage(session);
   const wrapperRef = useRef(null);
@@ -295,6 +297,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
   const handleSignOut = async () => {
     closeDropdown();
     await signOut();
+    navigate('/', { replace: true });
   };
 
   const handleManageSubscription = async () => {
@@ -309,22 +312,29 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
 
   const initial = email ? email[0].toUpperCase() : null;
 
-  const personIcon = (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      <path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-    </svg>
-  );
+  const avatarLabel = (isLoggedIn ? initial : ui.account[0] || 'A').slice(0, 2).toUpperCase();
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
-      <button
-        className={styles.avatarBtn}
-        onClick={toggleDropdown}
-        title={email || ui.account}
-      >
-        {isLoggedIn ? initial : personIcon}
-      </button>
+      {renderTrigger ? renderTrigger({
+        open,
+        toggleDropdown,
+        avatarLabel,
+      }) : (
+        <button
+          className={styles.avatarBtn}
+          onClick={toggleDropdown}
+          title={email || ui.account}
+          aria-label={email || ui.account}
+        >
+          <Avatar
+            size="small"
+            variant="text"
+            label={avatarLabel}
+            badge={false}
+          />
+        </button>
+      )}
 
       {open && (
         <div className={styles.menu}>

@@ -50,12 +50,13 @@
 
 .input {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
   background-color: var(--bg-base);
   border: none;
   border-radius: 8px;
   color: var(--text-primary);
-  outline: none;
   font-family: var(--font-ui);
   transition: box-shadow 150ms ease;
 }
@@ -65,12 +66,13 @@
   background-color: var(--bg-base);
 }
 
-.input:focus {
+.input:focus-visible {
   box-shadow: 0 0 0 2px var(--focus-ring-soft);
+  outline: none;
 }
 
-:root[data-theme="dusk"] .input:focus,
-:root[data-theme="dawn"] .input:focus {
+:root[data-theme="dusk"] .input:focus-visible,
+:root[data-theme="dawn"] .input:focus-visible {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
 }
 
@@ -79,7 +81,7 @@
   padding: 10px 16px;
   font-size: 13px;
   font-weight: 500;
-  background-color: #1a1a2e;
+  background-color: var(--text-primary);
   color: var(--bg-base);
   border: none;
   border-radius: 8px;

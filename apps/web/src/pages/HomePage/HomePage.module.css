@@ -1,0 +1,145 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-reading);
+  --type-reading-body-size: 16px;
+  --type-reading-body-line: 26px;
+  --type-reading-body-tracking: 0.3px;
+}
+
+.navbarWrap {
+  position: relative;
+  z-index: 90;
+}
+
+.article {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 24px 120px;
+}
+
+.header {
+  margin-bottom: 48px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--display-sm-size);
+  font-weight: 560;
+  line-height: var(--display-sm-line);
+  letter-spacing: var(--display-sm-spacing);
+  font-variation-settings:
+    'GRAD' -40,
+    'wdth' 53,
+    'opsz' 88;
+  margin: 0 0 12px;
+}
+
+.subtitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-md-size);
+  font-weight: var(--weight-regular);
+  color: var(--text-dim);
+  line-height: var(--text-md-line);
+  letter-spacing: var(--text-md-spacing);
+  margin: 0;
+}
+
+.body {
+  font-size: var(--type-reading-body-size);
+  line-height: var(--type-reading-body-line);
+  letter-spacing: var(--type-reading-body-tracking);
+}
+
+.body :global(p) {
+  margin: 0 0 16px;
+}
+
+.body :global(h1) {
+  font-family: var(--font-serif);
+  font-size: var(--heading-md-size);
+  font-weight: 560;
+  margin: 24px 0 16px;
+  line-height: var(--heading-md-line);
+  letter-spacing: var(--heading-md-spacing);
+  font-variation-settings:
+    'GRAD' -40,
+    'wdth' 53,
+    'opsz' 88;
+}
+
+.body :global(h2) {
+  font-family: var(--font-serif);
+  font-size: var(--heading-sm-size);
+  font-weight: 560;
+  margin: 1.2em 0 24px;
+  line-height: var(--heading-sm-line);
+  letter-spacing: var(--heading-sm-spacing);
+  font-variation-settings:
+    'GRAD' -40,
+    'wdth' 53,
+    'opsz' 88;
+}
+
+.body :global(h3) {
+  font-family: var(--font-serif);
+  font-size: var(--heading-xs-size);
+  font-weight: 560;
+  margin: 1em 0 24px;
+  line-height: var(--heading-xs-line);
+  letter-spacing: var(--heading-xs-spacing);
+  font-variation-settings:
+    'GRAD' -40,
+    'wdth' 53,
+    'opsz' 88;
+}
+
+.body :global(blockquote) {
+  border-left: 2px solid var(--content-rule);
+  margin: 1em 0 24px;
+  padding-left: 1em;
+  color: var(--text-muted);
+}
+
+.body :global(hr) {
+  border: none;
+  border-top: 1px solid var(--content-rule);
+  margin: 2em 0 24px;
+}
+
+.body :global(ul),
+.body :global(ol) {
+  margin: 0.5em 0 24px;
+  padding-left: 1.5em;
+}
+
+.body :global(ul) {
+  list-style: disc;
+}
+
+.body :global(ol) {
+  list-style: decimal;
+}
+
+.body :global(li)::marker {
+  color: var(--text-primary);
+}
+
+.body :global(li) {
+  margin-bottom: 8px;
+}
+
+.body :global(li:last-child) {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 10px 12px;
+  }
+
+  .article {
+    padding: 96px 24px 80px;
+  }
+}
