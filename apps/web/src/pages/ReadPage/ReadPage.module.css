@@ -16,7 +16,7 @@
 .article {
   max-width: 680px;
   margin: 0 auto;
-  padding: 32px 24px 120px;
+  padding: 32px 24px 0;
 }
 
 .header {
@@ -29,10 +29,12 @@
   font-weight: 560;
   line-height: var(--display-sm-line);
   letter-spacing: var(--display-sm-spacing);
+  text-wrap: balance;
   font-variation-settings:
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
   margin: 0 0 12px;
 }
 
@@ -88,6 +90,9 @@
   font-size: var(--type-reading-body-size);
   line-height: var(--type-reading-body-line);
   letter-spacing: var(--type-reading-body-tracking);
+  padding: 0 0 200px;
+  content-visibility: auto;
+  contain-intrinsic-size: 900px;
 }
 
 .body :global(p) {
@@ -105,6 +110,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
 }
 
 .body :global(h2) {
@@ -118,6 +124,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
 }
 
 .body :global(h3) {
@@ -131,6 +138,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
 }
 
 .body :global(blockquote) {
@@ -382,6 +390,6 @@
 /* Responsive */
 @media (max-width: 640px) {
   .article {
-    padding: 32px 24px 80px;
+    padding: 32px 24px 0;
   }
 }

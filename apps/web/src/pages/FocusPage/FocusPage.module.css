@@ -4,6 +4,9 @@
   background: var(--bg-base);
   font-family: var(--font-reading);
   color: var(--text-primary);
+  --type-reading-body-size: 16px;
+  --type-reading-body-line: 26px;
+  --type-reading-body-tracking: 0.3px;
 }
 
 .scrollArea {
@@ -34,7 +37,7 @@
 .content {
   max-width: 680px;
   margin: 0 auto;
-  padding: 32px 24px 200px;
+  padding: 0 24px 200px;
 }
 
 /* Settings hover zone — wraps toggle and bar */
@@ -323,6 +326,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
 }
 
 .pageTitleText:hover {
@@ -349,6 +353,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
 }
 
 .pageTitleInput:focus {
@@ -558,6 +563,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
   transition: opacity 250ms ease;
 }
 
@@ -572,6 +578,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
   transition: opacity 250ms ease;
 }
 
@@ -586,6 +593,7 @@
     'GRAD' -40,
     'wdth' 53,
     'opsz' 88;
+  font-optical-sizing: none;
   transition: opacity 250ms ease;
 }
 
