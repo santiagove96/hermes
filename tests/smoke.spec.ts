@@ -26,20 +26,29 @@ test.describe('Public app smoke', () => {
     });
   });
 
-  test('opens the account menu and allows switching between login and signup views', async ({ page }) => {
+  test('shows direct auth CTA buttons in the public navbar', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('button[title="Cuenta"]').click();
-    await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Registrarse' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Iniciar Sesión' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Crear Cuenta' })).toBeVisible();
+    await expect(page.getByPlaceholder('Email')).toHaveCount(0);
+    await expect(page.getByPlaceholder('Contraseña')).toHaveCount(0);
+  });
 
-    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-    await expect(page.getByPlaceholder('Email')).toBeVisible();
-    await expect(page.getByPlaceholder('Contraseña')).toBeVisible();
+  test('renders Google-only entrypoints for /login and /signup', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+    await expect(page.getByText('Conectando con Google...')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+    await expect(page.getByPlaceholder('Email')).toHaveCount(0);
+    await expect(page.getByPlaceholder('Contraseña')).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Registrarse' }).click();
-    await expect(page.getByRole('button', { name: 'Google' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+    await page.goto('/signup');
+    await expect(page.getByRole('heading', { name: 'Crear cuenta' })).toBeVisible();
+    await expect(page.getByText('Conectando con Google...')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+    await expect(page.getByPlaceholder('Email')).toHaveCount(0);
+    await expect(page.getByPlaceholder('Contraseña')).toHaveCount(0);
   });
 
   test('redirects unauthenticated project routes back to the public home', async ({ page }) => {

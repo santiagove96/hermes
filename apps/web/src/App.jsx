@@ -27,17 +27,20 @@ function NotFound() {
 }
 
 function RedirectToLatestProject() {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const navigate = useNavigate();
   const [showHome, setShowHome] = useState(false);
 
   useEffect(() => {
+    if (loading) return;
+
     if (!session?.user?.id) {
       // Not logged in — show read-only public home article
       setShowHome(true);
       return;
     }
 
+    setShowHome(false);
     let cancelled = false;
 
     (async () => {
@@ -63,7 +66,7 @@ function RedirectToLatestProject() {
     })();
 
     return () => { cancelled = true; };
-  }, [session, navigate]);
+  }, [session, loading, navigate]);
 
   if (showHome) return <HomePage />;
   return (

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import posthog from 'posthog-js';
 import { createPortalSession } from '@hermes/api';
-import { supabase } from '../../lib/supabase';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
 import useUsage from '../../hooks/useUsage';
@@ -13,13 +12,6 @@ import styles from './UserMenu.module.css';
 const USER_MENU_TEXT = {
   es: {
     account: 'Cuenta',
-    changePassword: 'Cambiar contraseña',
-    newPassword: 'Nueva contraseña',
-    confirmNewPassword: 'Confirmar nueva contraseña',
-    passwordUpdated: 'Contraseña actualizada',
-    cancel: 'Cancelar',
-    updating: 'Actualizando...',
-    update: 'Actualizar',
     billing: 'Facturación',
     patron: 'Patron',
     trial: 'Prueba',
@@ -38,41 +30,11 @@ const USER_MENU_TEXT = {
     back: 'Volver',
     mcpServers: 'Servidores MCP',
     signOut: 'Cerrar sesión',
-    signIn: 'Iniciar sesión',
-    signUp: 'Registrarse',
-    email: 'Email',
-    password: 'Contraseña',
-    forgotPasswordQ: '¿Olvidaste tu contraseña?',
-    signingIn: 'Ingresando...',
-    logIn: 'Entrar',
-    noAccount: '¿No tienes cuenta?',
-    alreadyHaveAccount: '¿Ya tienes cuenta?',
-    creatingAccount: 'Creando cuenta...',
-    checkYourEmail: 'Revisa tu email',
-    signupDoneText: (email) => `Enviamos un link de confirmación a ${email}. Haz click para activar tu cuenta.`,
-    goToLogin: 'Ir al login',
-    resetPassword: 'Restablecer contraseña',
-    sending: 'Enviando...',
-    sendResetLink: 'Enviar link de recuperación',
-    rememberPassword: '¿Recordaste tu contraseña?',
-    forgotDoneText: (email) => `Enviamos un link para restablecer tu contraseña a ${email}. Haz click para definir una nueva.`,
-    backToSignIn: 'Volver a iniciar sesión',
-    passwordMin: 'La contraseña debe tener al menos 6 caracteres',
-    passwordsNoMatch: 'Las contraseñas no coinciden',
-    failedUpdatePassword: 'No se pudo actualizar la contraseña',
-    failedSignIn: 'No se pudo iniciar sesión',
-    failedCreateAccount: 'No se pudo crear la cuenta',
-    failedSendResetLink: 'No se pudo enviar el link de recuperación',
+    continueWithGoogle: 'Continuar con Google',
+    googleAuthFailed: 'No se pudo abrir Google. Intenta de nuevo.',
   },
   en: {
     account: 'Account',
-    changePassword: 'Change Password',
-    newPassword: 'New password',
-    confirmNewPassword: 'Confirm new password',
-    passwordUpdated: 'Password updated',
-    cancel: 'Cancel',
-    updating: 'Updating...',
-    update: 'Update',
     billing: 'Billing',
     patron: 'Patron',
     trial: 'Trial',
@@ -91,63 +53,39 @@ const USER_MENU_TEXT = {
     back: 'Back',
     mcpServers: 'MCP Servers',
     signOut: 'Sign Out',
-    signIn: 'Sign In',
-    signUp: 'Sign Up',
-    email: 'Email',
-    password: 'Password',
-    forgotPasswordQ: 'Forgot password?',
-    signingIn: 'Signing in...',
-    logIn: 'Log in',
-    noAccount: 'No account?',
-    alreadyHaveAccount: 'Already have an account?',
-    creatingAccount: 'Creating account...',
-    checkYourEmail: 'Check your email',
-    signupDoneText: (email) => `A confirmation link was sent to ${email}. Click it to activate your account.`,
-    goToLogin: 'Go to login',
-    resetPassword: 'Reset password',
-    sending: 'Sending...',
-    sendResetLink: 'Send reset link',
-    rememberPassword: 'Remember your password?',
-    forgotDoneText: (email) => `A password reset link was sent to ${email}. Click it to set a new password.`,
-    backToSignIn: 'Back to sign in',
-    passwordMin: 'Password must be at least 6 characters',
-    passwordsNoMatch: 'Passwords do not match',
-    failedUpdatePassword: 'Failed to update password',
-    failedSignIn: 'Failed to sign in',
-    failedCreateAccount: 'Failed to create account',
-    failedSendResetLink: 'Failed to send reset link',
+    continueWithGoogle: 'Continue with Google',
+    googleAuthFailed: 'Could not open Google. Please try again.',
   },
 };
 
-export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigger = null }) {
-  const { session, signIn, signInWithGoogle, signOut, updatePassword } = useAuth();
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
+export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
+  const { session, signInWithGoogle, signOut } = useAuth();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const { usage } = useUsage(session);
   const wrapperRef = useRef(null);
-  const passwordInputRef = useRef(null);
-  const loginEmailRef = useRef(null);
-  const signupEmailRef = useRef(null);
-  const forgotEmailRef = useRef(null);
-
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState('menu'); // 'menu' | 'password' | 'billing' | 'mcp' | 'login' | 'signup' | 'signupDone' | 'forgotPassword' | 'forgotPasswordDone'
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [forgotEmail, setForgotEmail] = useState('');
+  const [view, setView] = useState('menu'); // 'menu' | 'billing' | 'mcp'
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [openedAtMs, setOpenedAtMs] = useState(0);
 
   const isLoggedIn = !!session;
   const email = session?.user?.email;
   const ui = language === 'es' ? USER_MENU_TEXT.es : USER_MENU_TEXT.en;
 
   const openDropdown = useCallback(() => {
+    setOpenedAtMs(Date.now());
     setOpen(true);
     onDropdownOpen?.();
   }, [onDropdownOpen]);
@@ -155,15 +93,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
   const closeDropdown = useCallback(() => {
     setOpen(false);
     setView('menu');
-    setNewPassword('');
-    setConfirmPassword('');
-    setLoginEmail('');
-    setLoginPassword('');
-    setSignupEmail('');
-    setSignupPassword('');
-    setForgotEmail('');
     setError('');
-    setSuccess(false);
     onDropdownClose?.();
   }, [onDropdownClose]);
 
@@ -172,7 +102,6 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
     else openDropdown();
   }, [open, openDropdown, closeDropdown]);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handleClick = (e) => {
@@ -184,12 +113,11 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open, closeDropdown]);
 
-  // Escape key: back out of sub-views first, then close
   useEffect(() => {
     if (!open) return;
     const handleKey = (e) => {
       if (e.key === 'Escape') {
-        if (view === 'password' || view === 'billing' || view === 'mcp' || view === 'login' || view === 'signup' || view === 'signupDone' || view === 'forgotPassword' || view === 'forgotPasswordDone') {
+        if (view === 'billing' || view === 'mcp') {
           setView('menu');
           setError('');
         } else {
@@ -201,103 +129,19 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
     return () => document.removeEventListener('keydown', handleKey);
   }, [open, view, closeDropdown]);
 
-  // Auto-focus inputs when switching views
-  useEffect(() => {
-    if (view === 'password' && passwordInputRef.current) passwordInputRef.current.focus();
-    if (view === 'login' && loginEmailRef.current) loginEmailRef.current.focus();
-    if (view === 'signup' && signupEmailRef.current) signupEmailRef.current.focus();
-    if (view === 'forgotPassword' && forgotEmailRef.current) forgotEmailRef.current.focus();
-  }, [view]);
-
-  // Auto-close on success
-  useEffect(() => {
-    if (!success) return;
-    const timer = setTimeout(closeDropdown, 1500);
-    return () => clearTimeout(timer);
-  }, [success, closeDropdown]);
-
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (newPassword.length < 6) {
-      setError(ui.passwordMin);
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError(ui.passwordsNoMatch);
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await updatePassword(newPassword);
-      setSuccess(true);
-    } catch (err) {
-      setError(err.message || ui.failedUpdatePassword);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      const { error: err } = await signIn(loginEmail, loginPassword);
-      if (err) {
-        setError(err.message);
-      } else {
-        closeDropdown();
-      }
-    } catch (err) {
-      setError(err.message || ui.failedSignIn);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSignupSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      const { error: err } = await supabase.auth.signUp({ email: signupEmail, password: signupPassword });
-      if (err) {
-        setError(err.message);
-      } else {
-        setView('signupDone');
-      }
-    } catch (err) {
-      setError(err.message || ui.failedCreateAccount);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleForgotSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      const { error: err } = await supabase.auth.resetPasswordForEmail(forgotEmail);
-      if (err) {
-        setError(err.message);
-      } else {
-        setView('forgotPasswordDone');
-      }
-    } catch (err) {
-      setError(err.message || ui.failedSendResetLink);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleSignOut = async () => {
     closeDropdown();
     await signOut();
     navigate('/', { replace: true });
+  };
+
+  const handleGoogleAuth = async () => {
+    setError('');
+    try {
+      await signInWithGoogle('menu');
+    } catch {
+      setError(ui.googleAuthFailed);
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -311,77 +155,28 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
   };
 
   const initial = email ? email[0].toUpperCase() : null;
-
   const avatarLabel = (isLoggedIn ? initial : ui.account[0] || 'A').slice(0, 2).toUpperCase();
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
-      {renderTrigger ? renderTrigger({
-        open,
-        toggleDropdown,
-        avatarLabel,
-      }) : (
-        <button
-          className={styles.avatarBtn}
-          onClick={toggleDropdown}
-          title={email || ui.account}
-          aria-label={email || ui.account}
-        >
-          <Avatar
-            size="small"
-            variant="text"
-            label={avatarLabel}
-            badge={false}
-          />
-        </button>
-      )}
+      <button
+        className={styles.avatarBtn}
+        onClick={toggleDropdown}
+        title={email || ui.account}
+        aria-label={email || ui.account}
+      >
+        <Avatar
+          size="small"
+          variant="text"
+          label={avatarLabel}
+          badge={false}
+        />
+      </button>
 
       {open && (
         <div className={styles.menu}>
           {isLoggedIn ? (
-            view === 'password' ? (
-              <form className={styles.passwordForm} onSubmit={handlePasswordSubmit}>
-                  <div className={styles.passwordTitle}>{ui.changePassword}</div>
-                <input
-                  ref={passwordInputRef}
-                  className={styles.passwordInput}
-                  type="password"
-                  placeholder={ui.newPassword}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-                <input
-                  className={styles.passwordInput}
-                  type="password"
-                  placeholder={ui.confirmNewPassword}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                {error && <div className={styles.passwordError}>{error}</div>}
-                {success && <div className={styles.passwordSuccess}>{ui.passwordUpdated}</div>}
-                <div className={styles.passwordActions}>
-                  <button
-                    type="button"
-                    className={styles.cancelBtn}
-                    onClick={() => {
-                      setView('menu');
-                      setNewPassword('');
-                      setConfirmPassword('');
-                      setError('');
-                    }}
-                  >
-                    {ui.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    className={styles.updateBtn}
-                    disabled={submitting}
-                  >
-                    {submitting ? ui.updating : ui.update}
-                  </button>
-                </div>
-              </form>
-            ) : view === 'mcp' ? (
+            view === 'mcp' ? (
               <McpSettingsView session={session} onBack={() => setView('menu')} />
             ) : view === 'billing' ? (
               <div className={styles.billingView}>
@@ -390,7 +185,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
                   {usage?.plan === 'pro' ? ui.patron : usage?.isTrial ? ui.trial : ui.free} {ui.planSuffix}
                   {usage?.isTrial && usage?.trialExpiresAt && (
                     <span className={styles.billingCancelNote}>
-                      {' '}{ui.daysRemaining(Math.max(0, Math.ceil((new Date(usage.trialExpiresAt) - Date.now()) / (1000 * 60 * 60 * 24))))}
+                      {' '}{ui.daysRemaining(Math.max(0, Math.ceil((new Date(usage.trialExpiresAt) - openedAtMs) / (1000 * 60 * 60 * 24))))}
                     </span>
                   )}
                   {usage?.cancelAtPeriodEnd && usage?.currentPeriodEnd && (
@@ -461,12 +256,6 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
                 <div className={styles.menuItems}>
                   <button
                     className={styles.menuItem}
-                    onClick={() => setView('password')}
-                  >
-                    {ui.changePassword}
-                  </button>
-                  <button
-                    className={styles.menuItem}
                     onClick={() => setView('billing')}
                   >
                     {ui.billing}
@@ -488,185 +277,16 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose, renderTrigge
                 </div>
               </>
             )
-          ) : view === 'login' ? (
-            <form className={styles.loginForm} onSubmit={handleLoginSubmit}>
-              <div className={styles.loginTitle}>{ui.signIn}</div>
-              <input
-                ref={loginEmailRef}
-                className={styles.loginInput}
-                type="email"
-                placeholder={ui.email}
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                required
-              />
-              <input
-                className={styles.loginInput}
-                type="password"
-                placeholder={ui.password}
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-              />
-              <div className={styles.forgotLink}>
-                <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('forgotPassword'); }}>
-                  {ui.forgotPasswordQ}
-                </button>
-              </div>
-              {error && <div className={styles.loginError}>{error}</div>}
-              <button
-                type="submit"
-                className={styles.loginSubmitBtn}
-                disabled={submitting}
-              >
-                {submitting ? ui.signingIn : ui.logIn}
-              </button>
-              <button
-                type="button"
-                className={styles.googleBtn}
-                onClick={signInWithGoogle}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Google
-              </button>
-              <div className={styles.switchLink}>
-                {ui.noAccount}{' '}
-                <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('signup'); }}>
-                  {ui.signUp}
-                </button>
-              </div>
-            </form>
-          ) : view === 'signup' ? (
-            <form className={styles.loginForm} onSubmit={handleSignupSubmit}>
-              <div className={styles.loginTitle}>{ui.signUp}</div>
-              <input
-                ref={signupEmailRef}
-                className={styles.loginInput}
-                type="email"
-                placeholder={ui.email}
-                value={signupEmail}
-                onChange={(e) => setSignupEmail(e.target.value)}
-                required
-              />
-              <input
-                className={styles.loginInput}
-                type="password"
-                placeholder={ui.password}
-                value={signupPassword}
-                onChange={(e) => setSignupPassword(e.target.value)}
-                minLength={6}
-                required
-              />
-              {error && <div className={styles.loginError}>{error}</div>}
-              <button
-                type="submit"
-                className={styles.loginSubmitBtn}
-                disabled={submitting}
-              >
-                {submitting ? ui.creatingAccount : ui.signUp}
-              </button>
-              <button
-                type="button"
-                className={styles.googleBtn}
-                onClick={signInWithGoogle}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Google
-              </button>
-              <div className={styles.switchLink}>
-                {ui.alreadyHaveAccount}{' '}
-                <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('login'); }}>
-                  {ui.logIn}
-                </button>
-              </div>
-            </form>
-          ) : view === 'signupDone' ? (
-            <div className={styles.loginForm}>
-              <div className={styles.loginTitle}>{ui.checkYourEmail}</div>
-              <div className={styles.signupDoneText}>
-                {language === 'es' ? (
-                  <>Enviamos un link de confirmación a <strong>{signupEmail}</strong>. Haz click para activar tu cuenta.</>
-                ) : (
-                  <>A confirmation link was sent to <strong>{signupEmail}</strong>. Click it to activate your account.</>
-                )}
-              </div>
-              <button
-                type="button"
-                className={styles.loginSubmitBtn}
-                onClick={() => { setError(''); setView('login'); }}
-              >
-                {ui.goToLogin}
-              </button>
-            </div>
-          ) : view === 'forgotPassword' ? (
-            <form className={styles.loginForm} onSubmit={handleForgotSubmit}>
-              <div className={styles.loginTitle}>{ui.resetPassword}</div>
-              <input
-                ref={forgotEmailRef}
-                className={styles.loginInput}
-                type="email"
-                placeholder={ui.email}
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                required
-              />
-              {error && <div className={styles.loginError}>{error}</div>}
-              <button
-                type="submit"
-                className={styles.loginSubmitBtn}
-                disabled={submitting}
-              >
-                {submitting ? ui.sending : ui.sendResetLink}
-              </button>
-              <div className={styles.switchLink}>
-                {ui.rememberPassword}{' '}
-                <button type="button" className={styles.switchBtn} onClick={() => { setError(''); setView('login'); }}>
-                  {ui.logIn}
-                </button>
-              </div>
-            </form>
-          ) : view === 'forgotPasswordDone' ? (
-            <div className={styles.loginForm}>
-              <div className={styles.loginTitle}>{ui.checkYourEmail}</div>
-              <div className={styles.signupDoneText}>
-                {language === 'es' ? (
-                  <>Enviamos un link para restablecer tu contraseña a <strong>{forgotEmail}</strong>. Haz click para definir una nueva.</>
-                ) : (
-                  <>A password reset link was sent to <strong>{forgotEmail}</strong>. Click it to set a new password.</>
-                )}
-              </div>
-              <button
-                type="button"
-                className={styles.loginSubmitBtn}
-                onClick={() => { setError(''); setView('login'); }}
-              >
-                {ui.backToSignIn}
-              </button>
-            </div>
           ) : (
             <div className={styles.menuItems}>
               <button
-                className={styles.menuItem}
-                onClick={() => { setError(''); setView('login'); }}
+                className={styles.googleBtn}
+                onClick={handleGoogleAuth}
               >
-                {ui.signIn}
+                <GoogleIcon />
+                {ui.continueWithGoogle}
               </button>
-              <button
-                className={styles.menuItem}
-                onClick={() => { setError(''); setView('signup'); }}
-              >
-                {ui.signUp}
-              </button>
+              {error ? <div className={styles.loginError}>{error}</div> : null}
             </div>
           )}
         </div>

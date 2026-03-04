@@ -162,9 +162,10 @@ test.describe('Authenticated focus page', () => {
     await page.goto('/projects/proj-1');
 
     await expect(page.getByRole('button', { name: 'Apartados para Dios' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Entrenar' })).toBeVisible();
+    await page.getByRole('button', { name: 'Entrenar' }).click();
     await expect(page.getByRole('button', { name: 'Tarjetas' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Q&A' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Cambiar a letra (grande|pequeña)/ })).toBeVisible();
     await expect(page.locator('.ProseMirror')).toContainText('Este es el cuerpo inicial del artículo.');
   });
 

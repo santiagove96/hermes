@@ -6,6 +6,14 @@ import { IS_TAURI } from '../lib/platform';
 
 export const AuthContext = createContext(null);
 
+function getWebAuthRedirectPath(pathname) {
+  const configuredBase = import.meta.env.VITE_AUTH_REDIRECT_URL;
+  const baseUrl = configuredBase && configuredBase.trim().length > 0
+    ? configuredBase.trim().replace(/\/+$/, '')
+    : window.location.origin;
+  return `${baseUrl}${pathname}`;
+}
+
 export default function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +102,7 @@ export default function AuthProvider({ children }) {
   const signIn = (email, password) =>
     supabase.auth.signInWithPassword({ email, password });
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (_intent = 'login') => {
     if (IS_TAURI) {
       // In Tauri, open OAuth in system browser and handle callback via deep link
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -113,7 +121,7 @@ export default function AuthProvider({ children }) {
     }
     return supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/login` },
+      options: { redirectTo: getWebAuthRedirectPath('/login') },
     });
   };
 
