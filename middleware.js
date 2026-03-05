@@ -1,13 +1,8 @@
-// Vercel Edge Middleware — serves OG meta tags for /read/* URLs.
-// Detects social crawlers and OG scrapers, serves them a lightweight HTML
-// with article-specific OG tags. Humans get the SPA with default tags.
-//
-// Strategy: instead of maintaining a bot allowlist (fragile — misses unknown
-// scrapers like opengraph.xyz), we detect real browsers and serve the OG HTML
-// to everything else. Real browsers identify themselves with a known engine
-// token (Chrome, Firefox, Safari, etc). Safari-only UAs get an extra check
-// via Sec-Fetch-Dest header, since Apple's link preview fetchers (iMessage,
-// Mail, Notes) also use Safari UAs but don't send Sec-Fetch headers.
+// Vercel Edge Middleware — serves OG meta tags for public article URLs.
+// Handles canonicalization for:
+// - /:username/:slug (new)
+// - /:username (latest published)
+// - /read/:shortId/:slug (legacy => canonical redirect)
 
 const BROWSER_ENGINES = [
   'chrome/',
@@ -21,38 +16,49 @@ const BROWSER_ENGINES = [
   'arc/',
 ];
 
+const RESERVED_PATHS = new Set([
+  'api',
+  'auth',
+  'login',
+  'signup',
+  'projects',
+  'upgrade',
+  'read',
+  'preview',
+  'reset-password',
+  'forgot-password',
+  'onboarding',
+  'assets',
+]);
+
 function isRealBrowser(request) {
   const userAgent = request.headers.get('user-agent') || '';
   const ua = userAgent.toLowerCase();
 
   if (!BROWSER_ENGINES.some((engine) => ua.includes(engine))) return false;
 
-  // Chrome, Firefox, Edge, etc. are definitively real browsers
   const isSafariOnly =
-    ua.includes('safari/') &&
-    !ua.includes('chrome/') &&
-    !ua.includes('firefox/') &&
-    !ua.includes('edg/');
+    ua.includes('safari/')
+    && !ua.includes('chrome/')
+    && !ua.includes('firefox/')
+    && !ua.includes('edg/');
 
   if (!isSafariOnly) return true;
 
-  // Safari-only UAs are ambiguous — Apple's link preview fetchers (iMessage,
-  // Mail, Notes) also send Safari UAs. Use Sec-Fetch-Dest as a tiebreaker:
-  // real Safari navigation sends "document", scrapers send nothing.
   return request.headers.get('sec-fetch-dest') === 'document';
 }
 
 function stripMarkdown(text) {
   return text
-    .replace(/#{1,6}\s+/g, '')       // headings
-    .replace(/[*_]{1,3}(.+?)[*_]{1,3}/g, '$1')  // bold/italic
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1')          // links
-    .replace(/!\[.*?\]\(.+?\)/g, '')              // images
-    .replace(/`{1,3}[^`]*`{1,3}/g, '')           // code
-    .replace(/>\s+/g, '')             // blockquotes
-    .replace(/[-*+]\s+/g, '')         // list markers
-    .replace(/\d+\.\s+/g, '')         // ordered lists
-    .replace(/---+/g, '')             // hr
+    .replace(/#{1,6}\s+/g, '')
+    .replace(/[*_]{1,3}(.+?)[*_]{1,3}/g, '$1')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+    .replace(/!\[.*?\]\(.+?\)/g, '')
+    .replace(/`{1,3}[^`]*`{1,3}/g, '')
+    .replace(/>\s+/g, '')
+    .replace(/[-*+]\s+/g, '')
+    .replace(/\d+\.\s+/g, '')
+    .replace(/---+/g, '')
     .replace(/\n{2,}/g, ' ')
     .replace(/\n/g, ' ')
     .trim();
@@ -66,46 +72,171 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+async function fetchRest(url, headers) {
+  const res = await fetch(url, { headers });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function resolveCanonicalUsername(username, supabaseUrl, headers) {
+  const normalized = String(username || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  const profileRows = await fetchRest(
+    `${supabaseUrl}/rest/v1/user_profiles?username=eq.${encodeURIComponent(normalized)}&select=username&limit=1`,
+    headers,
+  );
+  if (profileRows?.length) return String(profileRows[0].username || '').toLowerCase();
+
+  const aliasRows = await fetchRest(
+    `${supabaseUrl}/rest/v1/user_profile_username_aliases?username=eq.${encodeURIComponent(normalized)}&select=user_id&limit=1`,
+    headers,
+  );
+  if (!aliasRows?.length) return null;
+
+  const currentRows = await fetchRest(
+    `${supabaseUrl}/rest/v1/user_profiles?id=eq.${encodeURIComponent(aliasRows[0].user_id)}&select=username&limit=1`,
+    headers,
+  );
+
+  if (!currentRows?.length) return null;
+  return String(currentRows[0].username || '').toLowerCase();
+}
+
+function buildOgHtml({ title, description, canonicalUrl, ogImageUrl, author }) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(title)}${author ? ` — ${escapeHtml(author)}` : ''}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:image" content="${escapeHtml(ogImageUrl)}">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Diless">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(canonicalUrl)}">
+</head>
+<body></body>
+</html>`;
+}
+
 export const config = {
-  matcher: '/read/:path*',
+  matcher: '/:path*',
 };
 
 export default async function middleware(request) {
-  // Real browsers get the SPA — they can render client-side
-  if (isRealBrowser(request)) return;
-
   const url = new URL(request.url);
   const parts = url.pathname.split('/').filter(Boolean);
-  // /read/:shortId or /read/:shortId/:slug
+  const first = (parts[0] || '').toLowerCase();
+
+  if (!parts.length || RESERVED_PATHS.has(first)) {
+    // Keep handling legacy /read below.
+  } else {
+    // /:username or /:username/:slug
+    const username = first;
+    const slug = parts[1] || null;
+
+    if (parts.length > 2) return;
+
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) return;
+
+    const headers = {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+    };
+
+    try {
+      const canonicalUsername = await resolveCanonicalUsername(username, supabaseUrl, headers);
+      if (!canonicalUsername) return;
+
+      const base = `${supabaseUrl}/rest/v1/projects?published=eq.true&owner_username=eq.${encodeURIComponent(canonicalUsername)}&select=title,subtitle,author_name,owner_username,published_pages,published_tabs,short_id,slug,published_at`;
+      const query = slug
+        ? `${base}&slug=eq.${encodeURIComponent(slug)}&limit=1`
+        : `${base}&order=published_at.desc&limit=1`;
+
+      const rows = await fetchRest(query, headers);
+      if (!rows?.length) return;
+      const project = rows[0];
+      const canonicalUrl = `${url.origin}/${project.owner_username}/${project.slug}`;
+
+      if (isRealBrowser(request) && url.pathname !== new URL(canonicalUrl).pathname) {
+        return Response.redirect(canonicalUrl, 301);
+      }
+      if (isRealBrowser(request)) return;
+
+      let description = project.subtitle || '';
+      if (!description) {
+        const tabs = project.published_tabs || [];
+        const pages = project.published_pages || {};
+        for (const tab of tabs) {
+          if (pages[tab]?.trim()) {
+            description = stripMarkdown(pages[tab]).slice(0, 160);
+            break;
+          }
+        }
+      }
+
+      const ogImageUrl = `${url.origin}/api/og?title=${encodeURIComponent(project.title || 'Untitled')}&author=${encodeURIComponent(project.author_name || '')}`;
+      const html = buildOgHtml({
+        title: project.title || 'Untitled',
+        description,
+        canonicalUrl,
+        ogImageUrl,
+        author: project.author_name || '',
+      });
+
+      return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    } catch {
+      return;
+    }
+  }
+
+  // Legacy /read/:shortId or /read/:shortId/:slug
+  if (first !== 'read') return;
+
   const shortId = parts[1];
   if (!shortId) return;
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
   if (!supabaseUrl || !supabaseAnonKey) return;
 
+  const headers = {
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${supabaseAnonKey}`,
+  };
+
   try {
-    const apiUrl = `${supabaseUrl}/rest/v1/projects?short_id=eq.${encodeURIComponent(shortId)}&published=eq.true&select=title,subtitle,author_name,published_pages,published_tabs,short_id,slug`;
-    const res = await fetch(apiUrl, {
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-      },
-    });
-
-    if (!res.ok) return;
-
-    const rows = await res.json();
-    if (!rows || rows.length === 0) return;
+    const rows = await fetchRest(
+      `${supabaseUrl}/rest/v1/projects?short_id=eq.${encodeURIComponent(shortId)}&published=eq.true&select=title,subtitle,author_name,owner_username,published_pages,published_tabs,short_id,slug&limit=1`,
+      headers,
+    );
+    if (!rows?.length) return;
 
     const project = rows[0];
-    const title = project.title || 'Untitled';
-    const subtitle = project.subtitle || '';
-    const author = project.author_name || '';
+    const canonicalUrl = project.owner_username
+      ? `${url.origin}/${project.owner_username}/${project.slug || 'essay'}`
+      : `${url.origin}/read/${project.short_id}/${project.slug || 'essay'}`;
 
-    // Build description: prefer subtitle, fall back to first published tab content
-    let description = subtitle;
+    if (isRealBrowser(request)) {
+      if (url.pathname !== new URL(canonicalUrl).pathname) {
+        return Response.redirect(canonicalUrl, 301);
+      }
+      return;
+    }
+
+    let description = project.subtitle || '';
     if (!description) {
       const tabs = project.published_tabs || [];
       const pages = project.published_pages || {};
@@ -117,36 +248,20 @@ export default async function middleware(request) {
       }
     }
 
-    const canonicalUrl = `${url.origin}/read/${project.short_id}/${project.slug || 'essay'}`;
-    const ogImageUrl = `${url.origin}/api/og?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}`;
-
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${escapeHtml(title)}${author ? ` — ${escapeHtml(author)}` : ''}</title>
-  <meta name="description" content="${escapeHtml(description)}">
-  <meta property="og:title" content="${escapeHtml(title)}">
-  <meta property="og:description" content="${escapeHtml(description)}">
-  <meta property="og:image" content="${escapeHtml(ogImageUrl)}">
-  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
-  <meta property="og:type" content="article">
-  <meta property="og:site_name" content="Hermes">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(title)}">
-  <meta name="twitter:description" content="${escapeHtml(description)}">
-  <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
-  <meta http-equiv="refresh" content="0;url=${escapeHtml(canonicalUrl)}">
-</head>
-<body></body>
-</html>`;
+    const ogImageUrl = `${url.origin}/api/og?title=${encodeURIComponent(project.title || 'Untitled')}&author=${encodeURIComponent(project.author_name || '')}`;
+    const html = buildOgHtml({
+      title: project.title || 'Untitled',
+      description,
+      canonicalUrl,
+      ogImageUrl,
+      author: project.author_name || '',
+    });
 
     return new Response(html, {
       status: 200,
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   } catch {
-    // On any error, fall through to SPA
     return;
   }
 }

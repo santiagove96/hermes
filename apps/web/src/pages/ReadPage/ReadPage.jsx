@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { fetchPublishedEssay } from '@hermes/api';
+import { buildCanonicalPublicUrl, fetchPublishedEssayByPath, fetchPublishedEssayByShortId } from '@hermes/api';
 import { getSingleCanvasPublishedContent } from '../../lib/singleCanvas';
 import Navbar from '../../components/ui/Navbar';
 import MarkdownText from '../../components/MarkdownText/MarkdownText';
@@ -33,7 +33,7 @@ function isMobileSelectionSurface() {
 }
 
 export default function ReadPage() {
-  const { shortId, slug } = useParams();
+  const { shortId, slug, username } = useParams();
   const navigate = useNavigate();
   const [essay, setEssay] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,7 @@ export default function ReadPage() {
   const mobileSelectionUi = isMobileSelectionSurface();
 
   useEffect(() => {
-    if (!shortId) return;
+    if (!shortId && !username) return;
 
     let cancelled = false;
     let retryTimer;
@@ -62,7 +62,13 @@ export default function ReadPage() {
 
     const loadEssay = async (attempt = 0) => {
       try {
-        const data = await fetchPublishedEssay(shortId);
+        let data = null;
+        let canonicalUrl = '';
+        if (shortId) {
+          data = await fetchPublishedEssayByShortId(shortId);
+        } else if (username) {
+          data = await fetchPublishedEssayByPath({ username, slug });
+        }
         if (cancelled) return;
 
         if (!data) {
@@ -71,9 +77,18 @@ export default function ReadPage() {
           return;
         }
 
-        // Redirect to canonical URL if slug doesn't match
-        if (slug !== data.slug) {
-          navigate(`/read/${data.shortId}/${data.slug}`, { replace: true });
+        // Redirect to canonical URL
+        if (data.ownerUsername && data.slug) {
+          canonicalUrl = buildCanonicalPublicUrl({
+            username: data.ownerUsername,
+            slug: data.slug,
+          });
+        } else if (data.shortId && data.slug) {
+          canonicalUrl = `${window.location.origin}/read/${data.shortId}/${data.slug}`;
+        }
+
+        if (canonicalUrl && window.location.href !== canonicalUrl) {
+          navigate(new URL(canonicalUrl).pathname, { replace: true });
           return;
         }
 
@@ -103,7 +118,7 @@ export default function ReadPage() {
       cancelled = true;
       if (retryTimer) window.clearTimeout(retryTimer);
     };
-  }, [shortId, slug, navigate]);
+  }, [shortId, slug, username, navigate]);
 
   const hideSelectionMenu = useCallback(() => {
     setSelectionMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));

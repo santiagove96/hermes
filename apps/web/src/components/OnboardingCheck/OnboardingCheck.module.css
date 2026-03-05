@@ -1,0 +1,57 @@
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
+.tag {
+  background: var(--bg-overlay);
+  color: var(--text-dim);
+  border-radius: 4px;
+  padding: 2px 4px;
+  min-width: 20px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(40, 36, 31, 0.08);
+  border: 1px solid rgba(40, 36, 31, 0.16);
+}
+
+.dotChecked {
+  background: #7ac89a;
+  border-color: #7ac89a;
+}
+
+.dotChecked::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg);
+  margin: 5px 0 0 4px;
+}
+
+.description {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--font-xs);
+  line-height: 16px;
+}

@@ -74,6 +74,19 @@
   box-sizing: border-box;
 }
 
+.readOnlyValue {
+  min-height: 36px;
+  border-radius: var(--rounded-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: var(--font-sm);
+  line-height: var(--line-sm);
+}
+
 .input:focus {
   border-color: var(--border-accent);
 }

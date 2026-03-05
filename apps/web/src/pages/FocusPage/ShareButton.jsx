@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { publishProject, unpublishProject, updatePublishSettings, generateSlug } from '@hermes/api';
+import { publishProject, unpublishProject } from '@hermes/api';
 import { track } from '../../lib/analytics';
 import useLanguage from '../../hooks/useLanguage';
 import styles from './ShareButton.module.css';
@@ -14,12 +14,12 @@ const SINGLE_CANVAS_TAB = 'coral';
 
 export default function ShareButton({
   projectId,
-  projectTitle,
   getPages,
   published,
   shortId,
   slug,
   authorName: initialAuthorName,
+  ownerUsername,
   publishedTabs: _initialPublishedTabs,
   onPublishChange,
   isOpen,
@@ -28,7 +28,6 @@ export default function ShareButton({
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [authorName, setAuthorName] = useState(initialAuthorName || '');
   const [publishing, setPublishing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updated, setUpdated] = useState(false);
@@ -42,11 +41,6 @@ export default function ShareButton({
   useEffect(() => {
     if (isOpen) setOpen(true);
   }, [isOpen]);
-
-  // Sync with parent when props change
-  useEffect(() => {
-    setAuthorName(initialAuthorName || '');
-  }, [initialAuthorName]);
 
   // Outside click close
   useEffect(() => {
@@ -88,35 +82,39 @@ export default function ShareButton({
     if (!projectId || publishing) return;
     setPublishing(true);
     try {
-      const result = await publishProject(projectId, authorName, publishTabs);
+      const result = await publishProject(projectId, '', publishTabs);
       onPublishChange?.({
         published: true,
         shortId: result.shortId,
         slug: result.slug,
         authorName: result.authorName,
+        ownerUsername: result.ownerUsername,
+        ownerFullName: result.ownerFullName,
         publishedTabs: result.publishedTabs,
         publishedAt: result.publishedAt,
       });
       track('project_published', {
         tabs_count: result.publishedTabs?.length || 0,
-        has_author_name: !!authorName.trim(),
+        has_author_name: !!String(result.authorName || '').trim(),
       });
     } catch (err) {
       console.error('Publish failed:', err);
     }
     setPublishing(false);
-  }, [projectId, authorName, publishTabs, publishing, onPublishChange]);
+  }, [projectId, publishTabs, publishing, onPublishChange]);
 
   const handleUpdate = useCallback(async () => {
     if (!projectId || updating) return;
     setUpdating(true);
     try {
-      const result = await publishProject(projectId, authorName, publishTabs);
+      const result = await publishProject(projectId, '', publishTabs);
       onPublishChange?.({
         published: true,
         shortId: result.shortId,
         slug: result.slug,
         authorName: result.authorName,
+        ownerUsername: result.ownerUsername,
+        ownerFullName: result.ownerFullName,
         publishedTabs: result.publishedTabs,
         publishedAt: result.publishedAt,
       });
@@ -126,7 +124,7 @@ export default function ShareButton({
       console.error('Update failed:', err);
     }
     setUpdating(false);
-  }, [projectId, authorName, publishTabs, updating, onPublishChange, updatedTimerRef]);
+  }, [projectId, publishTabs, updating, onPublishChange, updatedTimerRef]);
 
   const handleUnpublish = useCallback(async () => {
     if (!projectId) return;
@@ -139,17 +137,11 @@ export default function ShareButton({
     }
   }, [projectId, onPublishChange]);
 
-  const handleAuthorBlur = useCallback(() => {
-    if (published && projectId) {
-      const newSlug = generateSlug(projectTitle || 'untitled');
-      updatePublishSettings(projectId, { author_name: authorName, slug: newSlug }).catch((err) => console.error('Author update failed:', err));
-      onPublishChange?.({ authorName, slug: newSlug });
-    }
-  }, [published, projectId, authorName, projectTitle, onPublishChange]);
-
-  const readUrl = shortId && slug
-    ? `${window.location.origin}/read/${shortId}/${slug}`
-    : '';
+  const readUrl = ownerUsername && slug
+    ? `${window.location.origin}/${ownerUsername}/${slug}`
+    : shortId && slug
+      ? `${window.location.origin}/read/${shortId}/${slug}`
+      : '';
 
   const handleCopy = useCallback(() => {
     if (!readUrl) return;
@@ -210,14 +202,7 @@ export default function ShareButton({
 
               <div className={styles.field}>
                 <label className={styles.label}>{t('shareButton.authorName')}</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  onBlur={handleAuthorBlur}
-                  placeholder={t('shareButton.yourName')}
-                />
+                <div className={styles.readOnlyValue}>{initialAuthorName || '-'}</div>
               </div>
 
               <button
@@ -253,13 +238,7 @@ export default function ShareButton({
 
               <div className={styles.field}>
                 <label className={styles.label}>{t('shareButton.authorName')}</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder={t('shareButton.yourName')}
-                />
+                <div className={styles.readOnlyValue}>{initialAuthorName || '-'}</div>
               </div>
 
               <button

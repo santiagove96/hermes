@@ -60,6 +60,29 @@ async function seedAuthenticatedSession(page: Page) {
   );
 }
 
+async function mockAuthenticatedUser(page: Page, options?: { onboardingCompleted?: boolean }) {
+  await page.route('**/auth/v1/user', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: MOCK_USER }),
+    });
+  });
+
+  await page.route('**/rest/v1/user_profiles*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: MOCK_USER.id,
+        full_name: 'Santi Ventura',
+        username: 'santi',
+        onboarding_completed_at: options?.onboardingCompleted === false ? null : '2026-03-05T10:00:00.000Z',
+      }),
+    });
+  });
+}
+
 test.describe('Public app smoke', () => {
   test('renders the public home article with default reading typography', async ({ page }) => {
     await page.goto('/');
@@ -124,14 +147,7 @@ test.describe('Public app smoke', () => {
     let requestedLegacyHomeSeed = false;
 
     await seedAuthenticatedSession(page);
-
-    await page.route('**/auth/v1/user', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ user: MOCK_USER }),
-      });
-    });
+    await mockAuthenticatedUser(page);
 
     await page.route('**/api/usage/current', async (route) => {
       await route.fulfill({
@@ -217,5 +233,14 @@ test.describe('Public app smoke', () => {
     await expect(page.getByRole('button', { name: 'Proyecto existente' })).toBeVisible();
     expect(createdUnexpectedProject).toBeFalsy();
     expect(requestedLegacyHomeSeed).toBeFalsy();
+  });
+
+  test('redirects authenticated users without onboarding to /onboarding', async ({ page }) => {
+    await seedAuthenticatedSession(page);
+    await mockAuthenticatedUser(page, { onboardingCompleted: false });
+
+    await page.goto('/');
+    await expect(page).toHaveURL('http://127.0.0.1:4173/onboarding');
+    await expect(page.getByRole('heading', { name: 'Tu identidad en Diles' })).toBeVisible();
   });
 });

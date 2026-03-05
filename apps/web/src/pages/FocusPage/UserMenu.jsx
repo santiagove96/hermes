@@ -29,6 +29,7 @@ const USER_MENU_TEXT = {
     featureSupport: 'Apoyas el desarrollo independiente',
     back: 'Volver',
     mcpServers: 'Servidores MCP',
+    onboarding: 'Onboarding',
     signOut: 'Cerrar sesión',
     continueWithGoogle: 'Continuar con Google',
     googleAuthFailed: 'No se pudo abrir Google. Intenta de nuevo.',
@@ -52,6 +53,7 @@ const USER_MENU_TEXT = {
     featureSupport: 'Support independent development',
     back: 'Back',
     mcpServers: 'MCP Servers',
+    onboarding: 'Onboarding',
     signOut: 'Sign Out',
     continueWithGoogle: 'Continue with Google',
     googleAuthFailed: 'Could not open Google. Please try again.',
@@ -259,6 +261,12 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                     onClick={() => setView('billing')}
                   >
                     {ui.billing}
+                  </button>
+                  <button
+                    className={styles.menuItem}
+                    onClick={() => { closeDropdown(); navigate('/onboarding'); }}
+                  >
+                    {ui.onboarding}
                   </button>
                   {usage?.hasMcpAccess && (
                     <button

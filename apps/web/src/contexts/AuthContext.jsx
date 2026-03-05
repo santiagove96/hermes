@@ -1,5 +1,5 @@
-import { createContext, useState, useEffect } from 'react';
-import { activateTrial } from '@hermes/api';
+import { createContext, useState, useEffect, useCallback } from 'react';
+import { activateTrial, fetchMyProfile } from '@hermes/api';
 import { identify, reset } from '../lib/analytics';
 import { supabase, initOfflineAdapter } from '../lib/supabase';
 import { IS_TAURI } from '../lib/platform';
@@ -17,7 +17,20 @@ function getWebAuthRedirectPath(pathname) {
 export default function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const nextProfile = await fetchMyProfile();
+      setProfile(nextProfile);
+    } catch {
+      setProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Check for OAuth error in URL hash (e.g. signup rejected)
@@ -44,6 +57,10 @@ export default function AuthProvider({ children }) {
         });
         // Initialize offline adapter for Tauri
         initOfflineAdapter(session.user.id);
+        loadProfile();
+      } else {
+        setProfile(null);
+        setProfileLoading(false);
       }
     });
 
@@ -56,7 +73,11 @@ export default function AuthProvider({ children }) {
         });
         // Initialize offline adapter for Tauri on auth change
         initOfflineAdapter(session.user.id);
+        setProfileLoading(true);
+        loadProfile();
       } else {
+        setProfile(null);
+        setProfileLoading(false);
         reset();
       }
     });
@@ -86,7 +107,7 @@ export default function AuthProvider({ children }) {
     }
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadProfile]);
 
   // Activate pending trial after Google OAuth redirect
   useEffect(() => {
@@ -130,8 +151,24 @@ export default function AuthProvider({ children }) {
   const updatePassword = (newPassword) =>
     supabase.auth.updateUser({ password: newPassword }).then(({ error }) => { if (error) throw error; });
 
+  const requiresOnboarding = !!session?.user && (!profile?.fullName || !profile?.username || !profile?.onboardingCompletedAt);
+
   return (
-    <AuthContext.Provider value={{ session, loading, authError, clearAuthError: () => setAuthError(null), signIn, signInWithGoogle, signOut, updatePassword }}>
+    <AuthContext.Provider value={{
+      session,
+      loading,
+      profile,
+      profileLoading,
+      requiresOnboarding,
+      refreshProfile: loadProfile,
+      authError,
+      clearAuthError: () => setAuthError(null),
+      signIn,
+      signInWithGoogle,
+      signOut,
+      updatePassword,
+    }}
+    >
       {children}
     </AuthContext.Provider>
   );

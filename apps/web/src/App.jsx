@@ -17,6 +17,7 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage/ResetPass
 const SignupPage = lazy(() => import('./pages/SignupPage/SignupPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage/LoginPage'));
 const UpgradePage = lazy(() => import('./pages/UpgradePage/UpgradePage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage/OnboardingPage'));
 
 function NotFound() {
   return (
@@ -28,16 +29,21 @@ function NotFound() {
 }
 
 function RedirectToLatestProject() {
-  const { session, loading } = useAuth();
+  const { session, loading, profileLoading, requiresOnboarding } = useAuth();
   const navigate = useNavigate();
   const [showHome, setShowHome] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || profileLoading) return;
 
     if (!session?.user?.id) {
       // Not logged in — show read-only public home article
       setShowHome(true);
+      return;
+    }
+
+    if (requiresOnboarding) {
+      navigate('/onboarding', { replace: true });
       return;
     }
 
@@ -67,21 +73,30 @@ function RedirectToLatestProject() {
     })();
 
     return () => { cancelled = true; };
-  }, [session, loading, navigate]);
+  }, [session, loading, profileLoading, requiresOnboarding, navigate]);
 
   if (showHome) return <HomePage />;
   return <GlobalLoader />;
 }
 
 function ProjectRoute() {
-  const { session, loading } = useAuth();
+  const { session, loading, profileLoading, requiresOnboarding } = useAuth();
 
-  if (loading) {
+  if (loading || profileLoading) {
     return <GlobalLoader />;
   }
 
   if (!session) return <Navigate to="/" replace />;
+  if (requiresOnboarding) return <Navigate to="/onboarding" replace />;
   return <FocusPage />;
+}
+
+function OnboardingRoute() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || profileLoading) return <GlobalLoader />;
+  if (!session) return <Navigate to="/" replace />;
+  return <OnboardingPage />;
 }
 
 export default function App() {
@@ -102,7 +117,10 @@ export default function App() {
           <Route path="/forgot-password" element={<Navigate to="/" replace />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
+          <Route path="/onboarding" element={<OnboardingRoute />} />
           <Route path="/auth/confirm" element={<AuthConfirmPage />} />
+          <Route path="/:username/:slug" element={<ReadPage />} />
+          <Route path="/:username" element={<ReadPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -5,6 +5,7 @@ const MOCK_PUBLISHED_ESSAY = {
   title: 'Apartados para Dios',
   subtitle: 'Un subtítulo de prueba para validar la lectura pública.',
   author_name: 'Santi Ventura',
+  owner_username: 'santi',
   published_pages: {
     main: '# Apartados\n\nEste es un párrafo público para compartir.\n\n- Punto uno\n- Punto dos',
   },
@@ -17,16 +18,45 @@ const MOCK_PUBLISHED_ESSAY = {
 async function mockPublishedEssay(page: Page) {
   await page.route('**/rest/v1/projects*', async (route) => {
     const url = route.request().url();
-
-    if (!url.includes('short_id=eq.abc123') || !url.includes('published=eq.true')) {
-      await route.continue();
+    if (url.includes('short_id=eq.abc123') && url.includes('published=eq.true')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_PUBLISHED_ESSAY),
+      });
       return;
     }
 
+    if (url.includes('owner_username=eq.santi') && url.includes('published=eq.true')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([MOCK_PUBLISHED_ESSAY]),
+      });
+      return;
+    }
+
+    await route.continue();
+  });
+
+  await page.route('**/rest/v1/user_profiles*', async (route) => {
+    const url = route.request().url();
+    if (!url.includes('username=eq.santi')) {
+      await route.continue();
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(MOCK_PUBLISHED_ESSAY),
+      body: JSON.stringify([{ username: 'santi' }]),
+    });
+  });
+
+  await page.route('**/rest/v1/user_profile_username_aliases*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
     });
   });
 }
@@ -37,11 +67,22 @@ test.describe('Public read page', () => {
 
     await page.goto('/read/abc123/slug-incorrecto');
 
-    await expect(page).toHaveURL('http://127.0.0.1:4173/read/abc123/apartados-para-dios');
+    await expect(page).toHaveURL('http://127.0.0.1:4173/santi/apartados-para-dios');
     await expect(page.getByRole('heading', { name: 'Apartados para Dios', level: 1 })).toBeVisible();
     await expect(page.getByText('Un subtítulo de prueba para validar la lectura pública.')).toBeVisible();
     await expect(page.getByText('Santi Ventura')).toBeVisible();
     await expect(page.getByText('February 27, 2026')).toBeVisible();
+  });
+
+  test('loads canonical public route by username and latest by username root', async ({ page }) => {
+    await mockPublishedEssay(page);
+
+    await page.goto('/santi/apartados-para-dios');
+    await expect(page.getByRole('heading', { name: 'Apartados para Dios', level: 1 })).toBeVisible();
+
+    await page.goto('/santi');
+    await expect(page).toHaveURL('http://127.0.0.1:4173/santi/apartados-para-dios');
+    await expect(page.getByText('Santi Ventura')).toBeVisible();
   });
 
   test('shows the selection action menu when text is selected on desktop', async ({ page }) => {

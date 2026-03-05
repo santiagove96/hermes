@@ -71,6 +71,8 @@ export interface WritingProjectRow {
   short_id: string | null;
   slug: string | null;
   author_name: string;
+  owner_username?: string | null;
+  owner_full_name?: string | null;
   published_tabs: string[];
   published_pages: Record<string, string>;
   published_at: string | null;
@@ -91,6 +93,8 @@ export interface WritingProject {
   shortId: string | null;
   slug: string | null;
   authorName: string;
+  ownerUsername: string | null;
+  ownerFullName: string | null;
   publishedTabs: string[];
   publishedPages: Record<string, string>;
   publishedAt: string | null;
@@ -102,10 +106,11 @@ export interface PublishedEssay {
   title: string;
   subtitle: string;
   authorName: string;
+  ownerUsername: string | null;
   pages: Record<string, string>;
   publishedTabs: string[];
   publishedAt: string;
-  shortId: string;
+  shortId: string | null;
   slug: string;
 }
 
@@ -159,6 +164,8 @@ export function toWritingProject(row: WritingProjectRow): WritingProject {
     shortId: row.short_id ?? null,
     slug: row.slug ?? null,
     authorName: row.author_name ?? '',
+    ownerUsername: row.owner_username ?? null,
+    ownerFullName: row.owner_full_name ?? null,
     publishedTabs: row.published_tabs ?? [],
     publishedPages: (row.published_pages as Record<string, string>) || {},
     publishedAt: row.published_at ?? null,
@@ -519,12 +526,103 @@ export function generateShortId(): string {
 
 export function generateSlug(title: string): string {
   return title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 80) || 'untitled';
+}
+
+async function resolveUniqueSlugForUser(userId: string, baseSlug: string, projectId: string): Promise<string> {
+  let candidate = baseSlug || 'untitled';
+  let suffix = 2;
+
+  for (;;) {
+    const { data, error } = await getSupabase()
+      .from('projects')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('published', true)
+      .eq('slug', candidate)
+      .neq('id', projectId)
+      .limit(1);
+
+    if (error) throw error;
+    if (!data?.length) return candidate;
+
+    candidate = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+type PublishedEssayRow = {
+  title: string;
+  subtitle: string | null;
+  author_name: string | null;
+  owner_username: string | null;
+  published_pages: Record<string, string> | null;
+  published_tabs: string[] | null;
+  published_at: string | null;
+  short_id: string | null;
+  slug: string | null;
+};
+
+function toPublishedEssay(row: PublishedEssayRow): PublishedEssay {
+  const publishedTabSet = new Set(row.published_tabs || []);
+  const filteredPages: Record<string, string> = {};
+  for (const tab of publishedTabSet) {
+    if ((row.published_pages as Record<string, string>)?.[tab]) {
+      filteredPages[tab] = (row.published_pages as Record<string, string>)[tab];
+    }
+  }
+
+  return {
+    title: row.title,
+    subtitle: row.subtitle ?? '',
+    authorName: row.author_name ?? '',
+    ownerUsername: row.owner_username ?? null,
+    pages: filteredPages,
+    publishedTabs: row.published_tabs || [],
+    publishedAt: row.published_at || new Date(0).toISOString(),
+    shortId: row.short_id ?? null,
+    slug: row.slug ?? 'untitled',
+  };
+}
+
+async function resolveCanonicalUsername(inputUsername: string): Promise<string | null> {
+  const normalized = String(inputUsername || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  const { data: profileData, error: profileError } = await getSupabase()
+    .from('user_profiles')
+    .select('username')
+    .eq('username', normalized)
+    .limit(1);
+
+  if (profileError) throw profileError;
+  const direct = profileData?.[0] as { username?: string | null } | undefined;
+  if (direct?.username) return String(direct.username).toLowerCase();
+
+  const { data: aliasData, error: aliasError } = await getSupabase()
+    .from('user_profile_username_aliases')
+    .select('user_id')
+    .eq('username', normalized)
+    .limit(1);
+  if (aliasError) throw aliasError;
+  const alias = aliasData?.[0] as { user_id?: string } | undefined;
+  if (!alias?.user_id) return null;
+
+  const { data: currentProfile, error: currentError } = await getSupabase()
+    .from('user_profiles')
+    .select('username')
+    .eq('id', alias.user_id)
+    .limit(1);
+  if (currentError) throw currentError;
+  const canonical = currentProfile?.[0] as { username?: string | null } | undefined;
+  return canonical?.username ? String(canonical.username).toLowerCase() : null;
 }
 
 export async function publishProject(
@@ -535,8 +633,25 @@ export async function publishProject(
   // Fetch current project to check if already published (reuse shortId)
   // and to snapshot current pages content
   const existing = await fetchWritingProject(projectId);
+  const { data: { user } } = await getSupabase().auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: profileData, error: profileError } = await getSupabase()
+    .from('user_profiles')
+    .select('full_name, username')
+    .eq('id', user.id)
+    .single();
+  if (profileError) throw profileError;
+
+  const ownerUsername = String(profileData?.username || '').trim().toLowerCase();
+  if (!ownerUsername) {
+    throw new Error('Complete onboarding to publish with a public username.');
+  }
+  const ownerFullName = String(profileData?.full_name || '').trim() || String(authorName || '').trim();
+
   const shortId = existing?.shortId || generateShortId();
-  const slug = generateSlug(existing?.title || 'untitled');
+  const baseSlug = generateSlug(existing?.title || 'untitled');
+  const slug = await resolveUniqueSlugForUser(user.id, baseSlug, projectId);
 
   // Snapshot only the selected tabs' content into published_pages
   const currentPages = existing?.pages || {};
@@ -553,7 +668,9 @@ export async function publishProject(
       published: true,
       short_id: shortId,
       slug,
-      author_name: authorName,
+      author_name: ownerFullName,
+      owner_username: ownerUsername,
+      owner_full_name: ownerFullName,
       published_tabs: publishedTabs,
       published_pages: publishedPages,
       published_at: new Date().toISOString(),
@@ -581,37 +698,49 @@ export async function unpublishProject(projectId: string): Promise<WritingProjec
 }
 
 export async function fetchPublishedEssay(shortId: string): Promise<PublishedEssay | null> {
+  return fetchPublishedEssayByShortId(shortId);
+}
+
+export async function fetchPublishedEssayByShortId(shortId: string): Promise<PublishedEssay | null> {
   const { data, error } = await getSupabase()
     .from('projects')
-    .select('title, subtitle, author_name, published_pages, published_tabs, published_at, short_id, slug')
+    .select('title, subtitle, author_name, owner_username, published_pages, published_tabs, published_at, short_id, slug')
     .eq('short_id', shortId)
     .eq('published', true)
-    .single();
+    .single<PublishedEssayRow>();
 
   if (error) {
     if ((error as { code?: string }).code === 'PGRST116') return null;
     throw error;
   }
 
-  // Read from the frozen snapshot (published_pages)
-  const publishedTabSet = new Set(data.published_tabs || []);
-  const filteredPages: Record<string, string> = {};
-  for (const tab of publishedTabSet) {
-    if ((data.published_pages as Record<string, string>)?.[tab]) {
-      filteredPages[tab] = (data.published_pages as Record<string, string>)[tab];
-    }
-  }
+  return toPublishedEssay(data);
+}
 
-  return {
-    title: data.title,
-    subtitle: data.subtitle ?? '',
-    authorName: data.author_name,
-    pages: filteredPages,
-    publishedTabs: data.published_tabs || [],
-    publishedAt: data.published_at,
-    shortId: data.short_id,
-    slug: data.slug,
-  };
+export function buildCanonicalPublicUrl(input: { username: string; slug: string }): string {
+  const username = String(input.username || '').trim().toLowerCase();
+  const slug = String(input.slug || '').trim();
+  return `${window.location.origin}/${username}/${slug}`;
+}
+
+export async function fetchPublishedEssayByPath(input: { username: string; slug?: string }): Promise<PublishedEssay | null> {
+  const canonicalUsername = await resolveCanonicalUsername(input.username);
+  if (!canonicalUsername) return null;
+
+  const baseQuery = getSupabase()
+    .from('projects')
+    .select('title, subtitle, author_name, owner_username, published_pages, published_tabs, published_at, short_id, slug')
+    .eq('published', true)
+    .eq('owner_username', canonicalUsername);
+
+  const query = input.slug
+    ? baseQuery.eq('slug', input.slug).limit(1)
+    : baseQuery.order('published_at', { ascending: false }).limit(1);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  if (!data?.length) return null;
+  return toPublishedEssay(data[0] as PublishedEssayRow);
 }
 
 export function getFallbackHomeEssay(): PublishedEssay {
@@ -619,6 +748,7 @@ export function getFallbackHomeEssay(): PublishedEssay {
     title: HOME_TITLE,
     subtitle: HOME_SUBTITLE,
     authorName: HOME_AUTHOR_NAME,
+    ownerUsername: null,
     pages: HOME_PAGES,
     publishedTabs: HOME_PUBLISHED_TABS,
     publishedAt: new Date(0).toISOString(),
@@ -638,11 +768,21 @@ export async function fetchHomeEssay(): Promise<PublishedEssay> {
 
 export async function updatePublishSettings(
   projectId: string,
-  updates: Partial<{ author_name: string; published_tabs: string[]; slug: string }>,
+  updates: Partial<{ author_name: string; published_tabs: string[]; slug: string; owner_username: string; owner_full_name: string }>,
 ): Promise<WritingProject> {
+  const payload = { ...updates } as Record<string, unknown>;
+  if (typeof payload.slug === 'string') {
+    const { data: { user } } = await getSupabase().auth.getUser();
+    if (user) {
+      payload.slug = await resolveUniqueSlugForUser(user.id, generateSlug(payload.slug as string), projectId);
+    } else {
+      payload.slug = generateSlug(payload.slug as string);
+    }
+  }
+
   const { data, error } = await getSupabase()
     .from('projects')
-    .update(updates)
+    .update(payload)
     .eq('id', projectId)
     .select('*')
     .single<WritingProjectRow>();

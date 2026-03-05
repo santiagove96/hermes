@@ -27,8 +27,17 @@ export {
   publishProject,
   unpublishProject,
   fetchPublishedEssay,
+  fetchPublishedEssayByShortId,
+  fetchPublishedEssayByPath,
+  buildCanonicalPublicUrl,
   updatePublishSettings,
 } from './writing';
+
+export {
+  fetchMyProfile,
+  checkUsernameAvailability,
+  saveMyIdentity,
+} from './profile';
 
 export { validateInviteCode, signupWithInvite, consumeInviteCode, activateTrial } from './auth';
 
@@ -64,3 +73,8 @@ export type {
   AnalyzeUsageInfo,
   PublishedEssay,
 } from './writing';
+
+export type {
+  MyProfile,
+  UsernameAvailability,
+} from './profile';

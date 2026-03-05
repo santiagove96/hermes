@@ -58,7 +58,10 @@ function isMobileSelectionSurface() {
   return !!(coarsePointer || narrowViewport);
 }
 
-function getShareAuthorName(session, publishAuthorName) {
+function getShareAuthorName(session, profileFullName, publishAuthorName) {
+  const profileName = String(profileFullName || '').trim();
+  if (profileName) return profileName;
+
   const published = String(publishAuthorName || '').trim();
   if (published) return published;
 
@@ -75,7 +78,7 @@ function getShareAuthorName(session, publishAuthorName) {
 export default function FocusPage() {
   const { projectId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { t } = useLanguage();
   const aiEnabled = import.meta.env.VITE_AI_ENABLED !== 'false';
   const [projectTitle, setProjectTitle] = useState('');
@@ -85,6 +88,8 @@ export default function FocusPage() {
     shortId: null,
     slug: null,
     authorName: '',
+    ownerUsername: null,
+    ownerFullName: null,
     publishedTabs: [],
     publishedAt: null,
   });
@@ -293,7 +298,7 @@ export default function FocusPage() {
       quote,
       blocks: selectionMenu.selectedBlocks,
       title: projectTitle || 'Diless',
-      author: getShareAuthorName(session, publishState.authorName),
+      author: getShareAuthorName(session, profile?.fullName, publishState.authorName),
       locale: 'es-AR',
     };
     setSelectionMenu((prev) => ({ ...prev, visible: false }));
@@ -310,7 +315,7 @@ export default function FocusPage() {
         toast.error(err?.message || 'No se pudo compartir la selección');
       }
     }
-  }, [projectTitle, publishState.authorName, selectionMenu.selectedBlocks, selectionMenu.selectedText, session]);
+  }, [projectTitle, profile?.fullName, publishState.authorName, selectionMenu.selectedBlocks, selectionMenu.selectedText, session]);
 
   const preserveSelectionDuringAction = useCallback((e) => {
     selectionActionPressRef.current = true;
@@ -421,6 +426,8 @@ export default function FocusPage() {
               shortId: project.shortId,
               slug: project.slug,
               authorName: project.authorName,
+              ownerUsername: project.ownerUsername,
+              ownerFullName: project.ownerFullName,
               publishedTabs: project.publishedTabs,
               publishedAt: project.publishedAt,
             });
@@ -521,6 +528,16 @@ export default function FocusPage() {
     setInitialLoaded(false);
     setProjectTitle('');
     setProjectSubtitle('');
+    setPublishState({
+      published: false,
+      shortId: null,
+      slug: null,
+      authorName: '',
+      ownerUsername: null,
+      ownerFullName: null,
+      publishedTabs: [],
+      publishedAt: null,
+    });
     setActiveTab('coral');
     setPages({ ...EMPTY_PAGES });
     pagesRef.current = { ...EMPTY_PAGES };
@@ -657,12 +674,12 @@ export default function FocusPage() {
 
     setProjectTitle(trimmed);
     try {
-      await updateWritingProject(projectId, { title: trimmed });
-      if (publishState.published) {
-        const slug = generateSlug(trimmed);
-        await updatePublishSettings(projectId, { slug });
-        handlePublishChange({ slug });
-      }
+        await updateWritingProject(projectId, { title: trimmed });
+        if (publishState.published) {
+          const slug = generateSlug(trimmed);
+          const updated = await updatePublishSettings(projectId, { slug });
+          handlePublishChange({ slug: updated.slug });
+        }
     } catch {
       // Revert on failure
       setProjectTitle(projectTitle);
@@ -819,6 +836,7 @@ export default function FocusPage() {
       shortId={publishState.shortId}
       slug={publishState.slug}
       authorName={publishState.authorName}
+      ownerUsername={publishState.ownerUsername}
       publishedTabs={publishState.publishedTabs}
       onPublishChange={handlePublishChange}
       isOpen={shareOpen}
@@ -846,6 +864,7 @@ export default function FocusPage() {
       shortId={publishState.shortId}
       slug={publishState.slug}
       authorName={publishState.authorName}
+      ownerUsername={publishState.ownerUsername}
       publishedTabs={publishState.publishedTabs}
       onPublishChange={handlePublishChange}
       isOpen={shareOpen}

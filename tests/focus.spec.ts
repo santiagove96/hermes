@@ -73,6 +73,19 @@ async function mockFocusProject(page: Page, initialProject: ReturnType<typeof bu
     });
   });
 
+  await page.route('**/rest/v1/user_profiles*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: MOCK_USER.id,
+        full_name: 'Santi Ventura',
+        username: 'santi',
+        onboarding_completed_at: '2026-03-05T10:00:00.000Z',
+      }),
+    });
+  });
+
   await page.route('**/api/usage/current', async (route) => {
     await route.fulfill({
       status: 200,
