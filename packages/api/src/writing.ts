@@ -3,7 +3,6 @@ import { getPlatform } from './config';
 import { getDataSource } from './dataSource';
 import { ESSAY_TITLE, ESSAY_SUBTITLE, ESSAY_PAGES } from './essay-seed';
 import {
-  HOME_ADMIN_EMAIL,
   HOME_AUTHOR_NAME,
   HOME_PAGES,
   HOME_PUBLISHED_TABS,
@@ -110,72 +109,6 @@ export interface PublishedEssay {
   slug: string;
 }
 
-async function ensureAdminHomeProject(user: { id: string; email?: string | null }): Promise<void> {
-  if ((user.email || '').toLowerCase() !== HOME_ADMIN_EMAIL) return;
-
-  const { data, error } = await getSupabase()
-    .from('projects')
-    .select('*')
-    .eq('user_id', user.id)
-    .or(`short_id.eq.${HOME_SHORT_ID},slug.eq.${HOME_SLUG},title.eq.${HOME_TITLE}`)
-    .order('updated_at', { ascending: false })
-    .limit(1);
-
-  if (error) throw error;
-
-  const existing = (data?.[0] as WritingProjectRow | undefined) ?? null;
-  const timestamp = new Date().toISOString();
-
-  if (!existing) {
-    const { error: insertError } = await getSupabase()
-      .from('projects')
-      .insert({
-        user_id: user.id,
-        title: HOME_TITLE,
-        subtitle: HOME_SUBTITLE,
-        status: 'complete',
-        pages: HOME_PAGES,
-        published: true,
-        short_id: HOME_SHORT_ID,
-        slug: HOME_SLUG,
-        author_name: HOME_AUTHOR_NAME,
-        published_tabs: HOME_PUBLISHED_TABS,
-        published_pages: HOME_PAGES,
-        published_at: timestamp,
-      });
-
-    if (insertError) throw insertError;
-    projectListCache = null;
-    return;
-  }
-
-  const updates: Record<string, unknown> = {};
-
-  if (!existing.short_id) updates.short_id = HOME_SHORT_ID;
-  if (!existing.slug) updates.slug = HOME_SLUG;
-  if (!existing.published) updates.published = true;
-  if (!existing.author_name) updates.author_name = HOME_AUTHOR_NAME;
-  if (!existing.subtitle) updates.subtitle = HOME_SUBTITLE;
-  if (!existing.pages || !Object.values(existing.pages).some((value) => String(value || '').trim())) {
-    updates.pages = HOME_PAGES;
-  }
-  if (!existing.published_tabs?.length) updates.published_tabs = HOME_PUBLISHED_TABS;
-  if (!existing.published_pages || !Object.values(existing.published_pages).some((value) => String(value || '').trim())) {
-    updates.published_pages = existing.pages || HOME_PAGES;
-  }
-  if (!existing.published_at) updates.published_at = timestamp;
-
-  if (!Object.keys(updates).length) return;
-
-  const { error: updateError } = await getSupabase()
-    .from('projects')
-    .update(updates)
-    .eq('id', existing.id);
-
-  if (updateError) throw updateError;
-  invalidateProject(existing.id);
-}
-
 export interface AssistantMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -244,8 +177,6 @@ export async function fetchWritingProjects(): Promise<WritingProject[]> {
 
   const { data: { user } } = await getSupabase().auth.getUser();
   if (!user) throw new Error('Not authenticated');
-
-  await ensureAdminHomeProject(user);
 
   const { data, error } = await getSupabase()
     .from('projects')
