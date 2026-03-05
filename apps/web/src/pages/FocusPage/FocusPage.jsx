@@ -10,7 +10,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import { Markdown } from '@tiptap/markdown';
 import { Slice } from '@tiptap/pm/model';
-import { CardsThree, ChatCircleDots, GlobeSimple, List, TextAlignLeft } from '@phosphor-icons/react';
+import { CardsThree, ChatCircleDots, GlobeSimple, TextAlignLeft } from '@phosphor-icons/react';
 import { fetchWritingProject, HOME_SHORT_ID, saveProjectPagesWithOptions, saveProjectHighlights, updateWritingProject, updatePublishSettings, generateSlug, fetchCurrentUsage } from '@hermes/api';
 import { IS_MOBILE } from '../../lib/platform';
 import { normalizeLegacyPagesForSingleCanvas } from '../../lib/singleCanvas';
@@ -102,13 +102,11 @@ export default function FocusPage() {
     };
   }, []);
   const [_dropdownOpen, setDropdownOpen] = useState(false);
-  const [actionsOpen, setActionsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [qaOpen, setQaOpen] = useState(false);
   const [flashcardsOpen, setFlashcardsOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeUsage, setAnalyzeUsage] = useState(null);
-  const [postCopied, setPostCopied] = useState(false);
   const [selectionMenu, setSelectionMenu] = useState({
     visible: false,
     left: 0,
@@ -119,7 +117,6 @@ export default function FocusPage() {
   });
   const [mobileSelectionOffset, setMobileSelectionOffset] = useState(12);
   const selectionActionPressRef = useRef(false);
-  const actionsRef = useRef(null);
   const [wordCount, setWordCount] = useState(0);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleEditValue, setTitleEditValue] = useState('');
@@ -742,43 +739,6 @@ export default function FocusPage() {
   // Stable callback for child components to read pages on-demand (avoids re-renders on every keystroke)
   const getPages = useCallback(() => pagesRef.current, []);
 
-  // Close actions menu on outside click
-  useEffect(() => {
-    if (!actionsOpen) return;
-    function handleMouseDown(e) {
-      if (actionsRef.current && !actionsRef.current.contains(e.target)) {
-        setActionsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [actionsOpen]);
-
-  // Escape key closes actions menu
-  useEffect(() => {
-    if (!actionsOpen) return;
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') {
-        setActionsOpen(false);
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [actionsOpen]);
-
-  const postCopiedTimerRef = useRef(null);
-  useEffect(() => () => { if (postCopiedTimerRef.current) clearTimeout(postCopiedTimerRef.current); }, []);
-
-  const handleCopyPost = useCallback(() => {
-    if (!editor) return;
-    const md = editor.getMarkdown();
-    navigator.clipboard.writeText(md).then(() => {
-      setPostCopied(true);
-      postCopiedTimerRef.current = setTimeout(() => setPostCopied(false), 2000);
-    });
-    setActionsOpen(false);
-  }, [editor]);
-
   const wordLabel = wordCount === 1 ? t('focusPage.word') : t('focusPage.words');
   const isProjectLoading = isLoggedIn && !!projectId && !initialLoaded;
   const trainItems = [
@@ -821,16 +781,101 @@ export default function FocusPage() {
     />
   ) : null;
 
-  const mobileMenuControl = (
-    <Button
-      variant="outline"
-      size="sm"
+  const desktopAnalyzeControl = isLoggedIn && projectId && aiEnabled ? (
+    <AnalyzeMenu
+      projectId={projectId}
+      session={session}
+      getPages={getPages}
+      activeTab={activeTab}
+      onStart={handleAnalyzeStart}
+      onHighlight={handleAnalyzeHighlight}
+      onDone={handleAnalyzeDone}
+      onError={handleAnalyzeError}
+      onUsage={handleAnalyzeUsage}
+    />
+  ) : null;
+
+  const mobileAnalyzeControl = isLoggedIn && projectId && aiEnabled ? (
+    <AnalyzeMenu
+      projectId={projectId}
+      session={session}
+      getPages={getPages}
+      activeTab={activeTab}
+      onStart={handleAnalyzeStart}
+      onHighlight={handleAnalyzeHighlight}
+      onDone={handleAnalyzeDone}
+      onError={handleAnalyzeError}
+      onUsage={handleAnalyzeUsage}
       iconOnly
-      aria-label="Menú"
-      onClick={() => setActionsOpen((open) => !open)}
-    >
-      <List size={16} weight="regular" />
-    </Button>
+    />
+  ) : null;
+
+  const desktopPublishControl = isLoggedIn && projectId ? (
+    <ShareButton
+      projectId={projectId}
+      projectTitle={projectTitle}
+      getPages={getPages}
+      published={publishState.published}
+      shortId={publishState.shortId}
+      slug={publishState.slug}
+      authorName={publishState.authorName}
+      publishedTabs={publishState.publishedTabs}
+      onPublishChange={handlePublishChange}
+      isOpen={shareOpen}
+      onOpenChange={setShareOpen}
+      renderTrigger={({ toggleOpen, title }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          iconOnly
+          aria-label={title}
+          onClick={toggleOpen}
+        >
+          <GlobeSimple size={16} weight="regular" />
+        </Button>
+      )}
+    />
+  ) : null;
+
+  const mobilePublishControl = isLoggedIn && projectId ? (
+    <ShareButton
+      projectId={projectId}
+      projectTitle={projectTitle}
+      getPages={getPages}
+      published={publishState.published}
+      shortId={publishState.shortId}
+      slug={publishState.slug}
+      authorName={publishState.authorName}
+      publishedTabs={publishState.publishedTabs}
+      onPublishChange={handlePublishChange}
+      isOpen={shareOpen}
+      onOpenChange={setShareOpen}
+      renderTrigger={({ toggleOpen, title }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          iconOnly
+          aria-label={title}
+          onClick={toggleOpen}
+        >
+          <GlobeSimple size={16} weight="regular" />
+        </Button>
+      )}
+    />
+  ) : null;
+
+  const desktopAccountControl = (
+    <UserMenu
+      onDropdownOpen={() => setDropdownOpen(true)}
+      onDropdownClose={() => setDropdownOpen(false)}
+    />
+  );
+
+  const mobileAccountControl = (
+    <UserMenu
+      onDropdownOpen={() => setDropdownOpen(true)}
+      onDropdownClose={() => setDropdownOpen(false)}
+    />
   );
 
   return (
@@ -842,127 +887,14 @@ export default function FocusPage() {
           wordCount={wordCount}
           wordLabel={wordLabel}
           startSlot={projectStartSlot}
-          analyzeControl={isLoggedIn && projectId && aiEnabled ? (
-            <AnalyzeMenu
-              projectId={projectId}
-              session={session}
-              getPages={getPages}
-              activeTab={activeTab}
-              onStart={handleAnalyzeStart}
-              onHighlight={handleAnalyzeHighlight}
-              onDone={handleAnalyzeDone}
-              onError={handleAnalyzeError}
-              onUsage={handleAnalyzeUsage}
-            />
-          ) : null}
+          analyzeControl={desktopAnalyzeControl}
           trainItems={aiEnabled ? trainItems : []}
-          publishControl={isLoggedIn && projectId ? (
-            <ShareButton
-              projectId={projectId}
-              projectTitle={projectTitle}
-              getPages={getPages}
-              published={publishState.published}
-              shortId={publishState.shortId}
-              slug={publishState.slug}
-              authorName={publishState.authorName}
-              publishedTabs={publishState.publishedTabs}
-              onPublishChange={handlePublishChange}
-              isOpen={shareOpen}
-              onOpenChange={setShareOpen}
-              renderTrigger={({ toggleOpen, title }) => (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  iconOnly
-                  aria-label={title}
-                  onClick={toggleOpen}
-                >
-                  <GlobeSimple size={16} weight="regular" />
-                </Button>
-              )}
-            />
-          ) : null}
-          accountControl={(
-            <UserMenu
-              onDropdownOpen={() => setDropdownOpen(true)}
-              onDropdownClose={() => setDropdownOpen(false)}
-            />
-          )}
-          mobileMenuControl={mobileMenuControl}
+          publishControl={desktopPublishControl}
+          accountControl={desktopAccountControl}
+          mobileAccountControl={mobileAccountControl}
+          mobilePublishControl={mobilePublishControl}
+          mobileAnalyzeControl={mobileAnalyzeControl}
         />
-
-        {/* Mobile actions menu */}
-        <div className={styles.navActionsOverlay}>
-          <div className={styles.actionsWrap} ref={actionsRef}>
-            {actionsOpen && (
-              <div className={styles.actionsMenu}>
-                  <div className={styles.actionsMenuInfo}>
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                      <path d="M2 13h12M2 9h8M2 5h12M2 1h5" />
-                    </svg>
-                    {wordCount} {wordLabel}
-                  </div>
-                  {isLoggedIn && projectId && aiEnabled && (
-                    <button
-                      className={styles.actionsMenuItem}
-                      onClick={() => {
-                        setFlashcardsOpen(true);
-                        setActionsOpen(false);
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 3.5h10v9H3z" />
-                        <path d="M5.5 6.25h5M5.5 8.5h4M5.5 10.75h3" />
-                      </svg>
-                      Generar tarjetas
-                    </button>
-                  )}
-                  {isLoggedIn && projectId && aiEnabled && (
-                    <button
-                      className={styles.actionsMenuItem}
-                      onClick={() => {
-                        setQaOpen(true);
-                        setActionsOpen(false);
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M8 13.5C11.038 13.5 13.5 11.038 13.5 8S11.038 2.5 8 2.5 2.5 4.962 2.5 8 4.962 13.5 8 13.5Z" />
-                        <path d="M5.75 6.25h.01M10.25 6.25h.01" />
-                        <path d="M5.5 9.75c.8-.65 1.64-.98 2.5-.98.86 0 1.7.33 2.5.98" />
-                      </svg>
-                      Q&amp;A Simulation
-                    </button>
-                  )}
-                  {isLoggedIn && projectId && (
-                    <button
-                      className={styles.actionsMenuItem}
-                      onClick={() => {
-                        setShareOpen(true);
-                        setActionsOpen(false);
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 12V14H12V12" />
-                        <path d="M8 10V2" />
-                        <path d="M5 5L8 2L11 5" />
-                      </svg>
-                      {t('focusPage.sharePost')}
-                    </button>
-                  )}
-                  <button
-                    className={styles.actionsMenuItem}
-                    onClick={handleCopyPost}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="5" y="5" width="9" height="9" rx="1" />
-                      <path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2" />
-                    </svg>
-                    {postCopied ? t('focusPage.copied') : t('focusPage.copyPost')}
-                  </button>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Scroll area — only this region scrolls */}

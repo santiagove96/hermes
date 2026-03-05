@@ -37,6 +37,9 @@ export default function Navbar({
   trainItems = [],
   accountControl = null,
   mobileMenuControl = null,
+  mobileAccountControl = null,
+  mobilePublishControl = null,
+  mobileAnalyzeControl = null,
   publishControl = null,
   themeControl = null,
   startSlot = null,
@@ -247,13 +250,10 @@ export default function Navbar({
 
       {!showOnlyBrand && isProject ? (
         <>
+          {mobileAccountControl || accountControl}
+          {mobilePublishControl || publishControl}
+          {mobileAnalyzeControl || analyzeControl}
           <span className={styles.wordCountMobile}>{wordCount}</span>
-          {mobileMenuControl || (
-            <Button variant="outline" size="sm" iconOnly aria-label="Menú">
-              <List size={16} weight="regular" />
-            </Button>
-          )}
-          {resolvedThemeControl}
         </>
       ) : null}
       {showOnlyBrand ? resolvedThemeControl : null}

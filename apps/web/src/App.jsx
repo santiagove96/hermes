@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import styles from './App.module.css';
 import useAuth from './hooks/useAuth';
 import EnvironmentBanner from './components/EnvironmentBanner/EnvironmentBanner';
+import GlobalLoader from './components/GlobalLoader/GlobalLoader';
 
 const FocusPage = lazy(() => import('./pages/FocusPage/FocusPage'));
 const ReadPage = lazy(() => import('./pages/ReadPage/ReadPage'));
@@ -69,30 +70,14 @@ function RedirectToLatestProject() {
   }, [session, loading, navigate]);
 
   if (showHome) return <HomePage />;
-  return (
-    <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ width: '40%', height: 24, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-        <div style={{ width: '80%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-        <div style={{ width: '60%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-      </div>
-    </main>
-  );
+  return <GlobalLoader />;
 }
 
 function ProjectRoute() {
   const { session, loading } = useAuth();
 
   if (loading) {
-    return (
-      <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ width: '40%', height: 24, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-          <div style={{ width: '80%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-          <div style={{ width: '60%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-        </div>
-      </main>
-    );
+    return <GlobalLoader />;
   }
 
   if (!session) return <Navigate to="/" replace />;
@@ -103,15 +88,7 @@ export default function App() {
   return (
     <div className={styles.app}>
       <EnvironmentBanner />
-      <Suspense fallback={
-        <main style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-          <div style={{ maxWidth: 700, margin: '0 auto', padding: '120px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ width: '40%', height: 24, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-            <div style={{ width: '80%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-            <div style={{ width: '60%', height: 14, background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius: 4 }} />
-          </div>
-        </main>
-      }>
+      <Suspense fallback={<GlobalLoader />}>
         <Routes>
           <Route path="/" element={<RedirectToLatestProject />} />
           <Route path="/preview/button" element={<ButtonPreviewPage />} />

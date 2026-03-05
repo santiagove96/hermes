@@ -65,6 +65,7 @@ export default function AnalyzeMenu({
   onDone,
   onError,
   onUsage,
+  iconOnly = false,
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -162,12 +163,14 @@ export default function AnalyzeMenu({
         variant="default"
         size="sm"
         startIcon={<Brain size={16} weight="regular" />}
+        iconOnly={iconOnly}
         onClick={() => setOpen((current) => !current)}
         loading={loading}
         aria-haspopup="true"
         aria-expanded={open}
+        aria-label="Analizar"
       >
-        Analizar
+        {iconOnly ? null : 'Analizar'}
       </Button>
 
       {open ? (

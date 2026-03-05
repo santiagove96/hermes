@@ -179,8 +179,7 @@
   }
 
   .currentProject {
-    max-width: 207px;
-    flex: 0 1 207px;
+    display: none;
   }
 
   .currentProjectTitle {

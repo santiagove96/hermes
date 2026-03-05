@@ -7,6 +7,7 @@ import Navbar from '../../components/ui/Navbar';
 import MarkdownText from '../../components/MarkdownText/MarkdownText';
 import { shareSelectionStory } from '../../lib/shareSelection';
 import { getPlainTextFromBlocks, getShareBlocksFromRange } from '../../lib/shareSelectionBlocks';
+import GlobalLoader from '../../components/GlobalLoader/GlobalLoader';
 import styles from './ReadPage.module.css';
 
 function formatDate(isoDate) {
@@ -231,31 +232,11 @@ export default function ReadPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className={styles.centered}>
-        <div className={styles.skeleton}>
-          <div className={styles.skeletonLine} style={{ width: '60%', height: '24px' }} />
-          <div className={styles.skeletonLine} style={{ width: '40%', height: '14px' }} />
-          <div className={styles.skeletonLine} style={{ width: '100%', height: '14px' }} />
-          <div className={styles.skeletonLine} style={{ width: '90%', height: '14px' }} />
-          <div className={styles.skeletonLine} style={{ width: '75%', height: '14px' }} />
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   if (essay && !hasRenderableEssayData(essay)) {
-    return (
-      <div className={styles.centered}>
-        <div className={styles.skeleton}>
-          <div className={styles.skeletonLine} style={{ width: '60%', height: '24px' }} />
-          <div className={styles.skeletonLine} style={{ width: '40%', height: '14px' }} />
-          <div className={styles.skeletonLine} style={{ width: '100%', height: '14px' }} />
-          <div className={styles.skeletonLine} style={{ width: '90%', height: '14px' }} />
-          <div className={styles.skeletonLine} style={{ width: '75%', height: '14px' }} />
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   if (!essay) {

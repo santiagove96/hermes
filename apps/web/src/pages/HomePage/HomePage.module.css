@@ -16,7 +16,7 @@
 .article {
   max-width: 680px;
   margin: 0 auto;
-  padding: 32px 24px 120px;
+  padding: 128px 24px 0;
 }
 
 .header {
@@ -50,17 +50,18 @@
   font-size: var(--type-reading-body-size);
   line-height: var(--type-reading-body-line);
   letter-spacing: var(--type-reading-body-tracking);
+  padding: 0 0 120px;
 }
 
 .body :global(p) {
-  margin: 0 0 16px;
+  margin: 0 0 24px;
 }
 
 .body :global(h1) {
   font-family: var(--font-serif);
   font-size: var(--heading-md-size);
   font-weight: 560;
-  margin: 24px 0 16px;
+  margin: 32px 0 24px;
   line-height: var(--heading-md-line);
   letter-spacing: var(--heading-md-spacing);
   font-variation-settings:
@@ -73,7 +74,7 @@
   font-family: var(--font-serif);
   font-size: var(--heading-sm-size);
   font-weight: 560;
-  margin: 1.2em 0 24px;
+  margin: 32px 0 24px;
   line-height: var(--heading-sm-line);
   letter-spacing: var(--heading-sm-spacing);
   font-variation-settings:
@@ -86,7 +87,7 @@
   font-family: var(--font-serif);
   font-size: var(--heading-xs-size);
   font-weight: 560;
-  margin: 1em 0 24px;
+  margin: 32px 0 24px;
   line-height: var(--heading-xs-line);
   letter-spacing: var(--heading-xs-spacing);
   font-variation-settings:
@@ -135,11 +136,7 @@
 }
 
 @media (max-width: 640px) {
-  .topbar {
-    padding: 10px 12px;
-  }
-
   .article {
-    padding: 96px 24px 80px;
+    padding: 128px 24px 0;
   }
 }
