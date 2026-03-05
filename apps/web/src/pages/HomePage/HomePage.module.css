@@ -16,11 +16,11 @@
 .article {
   max-width: 680px;
   margin: 0 auto;
-  padding: 128px 24px 0;
+  padding: 80px 24px 0;
 }
 
 .header {
-  margin-bottom: 48px;
+  margin-bottom: 24px;
 }
 
 .title {
@@ -137,6 +137,6 @@
 
 @media (max-width: 640px) {
   .article {
-    padding: 128px 24px 0;
+    padding: 80px 24px 0;
   }
 }

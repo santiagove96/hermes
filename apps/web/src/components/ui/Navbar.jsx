@@ -250,10 +250,10 @@ export default function Navbar({
 
       {!showOnlyBrand && isProject ? (
         <>
-          {mobileAccountControl || accountControl}
-          {mobilePublishControl || publishControl}
-          {mobileAnalyzeControl || analyzeControl}
           <span className={styles.wordCountMobile}>{wordCount}</span>
+          {mobileAnalyzeControl || analyzeControl}
+          {mobilePublishControl || publishControl}
+          {mobileAccountControl || accountControl}
         </>
       ) : null}
       {showOnlyBrand ? resolvedThemeControl : null}
