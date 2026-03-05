@@ -235,12 +235,42 @@ test.describe('Public app smoke', () => {
     expect(requestedLegacyHomeSeed).toBeFalsy();
   });
 
-  test('redirects authenticated users without onboarding to /onboarding', async ({ page }) => {
+  test('shows onboarding as blocking modal over latest project for users without onboarding', async ({ page }) => {
+    const project = buildProjectRow();
     await seedAuthenticatedSession(page);
     await mockAuthenticatedUser(page, { onboardingCompleted: false });
 
+    await page.route('**/rest/v1/projects*', async (route: Route) => {
+      const request = route.request();
+      const url = request.url();
+      if (request.method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+
+      if (url.includes(`user_id=eq.${MOCK_USER.id}`)) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([project]),
+        });
+        return;
+      }
+
+      if (url.includes('id=eq.proj-1')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(project),
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
     await page.goto('/');
-    await expect(page).toHaveURL('http://127.0.0.1:4173/onboarding');
+    await expect(page).toHaveURL('http://127.0.0.1:4173/projects/proj-1');
     await expect(page.getByRole('heading', { name: 'Tu identidad en Diles' })).toBeVisible();
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createPortalSession } from '@hermes/api';
 import { track } from '../../lib/analytics';
 import useAuth from '../../hooks/useAuth';
@@ -74,6 +74,7 @@ function GoogleIcon() {
 export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
   const { session, signInWithGoogle, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useLanguage();
   const { usage } = useUsage(session);
   const wrapperRef = useRef(null);
@@ -264,7 +265,10 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                   </button>
                   <button
                     className={styles.menuItem}
-                    onClick={() => { closeDropdown(); navigate('/onboarding'); }}
+                    onClick={() => {
+                      closeDropdown();
+                      navigate(`${location.pathname}?onboarding=1`);
+                    }}
                   >
                     {ui.onboarding}
                   </button>

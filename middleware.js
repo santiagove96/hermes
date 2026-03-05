@@ -88,6 +88,12 @@ async function resolveCanonicalUsername(username, supabaseUrl, headers) {
   );
   if (profileRows?.length) return String(profileRows[0].username || '').toLowerCase();
 
+  const legacyProfileRows = await fetchRest(
+    `${supabaseUrl}/rest/v1/profiles?username=eq.${encodeURIComponent(normalized)}&select=username&limit=1`,
+    headers,
+  );
+  if (legacyProfileRows?.length) return String(legacyProfileRows[0].username || '').toLowerCase();
+
   const aliasRows = await fetchRest(
     `${supabaseUrl}/rest/v1/user_profile_username_aliases?username=eq.${encodeURIComponent(normalized)}&select=user_id&limit=1`,
     headers,
@@ -99,8 +105,41 @@ async function resolveCanonicalUsername(username, supabaseUrl, headers) {
     headers,
   );
 
-  if (!currentRows?.length) return null;
-  return String(currentRows[0].username || '').toLowerCase();
+  if (currentRows?.length) return String(currentRows[0].username || '').toLowerCase();
+
+  const currentLegacyRows = await fetchRest(
+    `${supabaseUrl}/rest/v1/profiles?user_id=eq.${encodeURIComponent(aliasRows[0].user_id)}&select=username&limit=1`,
+    headers,
+  );
+  if (!currentLegacyRows?.length) return null;
+  return String(currentLegacyRows[0].username || '').toLowerCase();
+}
+
+async function fetchPublishedProjectByPath({ supabaseUrl, headers, username, slug }) {
+  const ownerBase = `${supabaseUrl}/rest/v1/projects?published=eq.true&owner_username=eq.${encodeURIComponent(username)}&select=title,subtitle,author_name,owner_username,author_username,published_pages,published_tabs,short_id,slug,published_at`;
+  const ownerQuery = slug
+    ? `${ownerBase}&slug=eq.${encodeURIComponent(slug)}&limit=1`
+    : `${ownerBase}&order=published_at.desc&limit=1`;
+
+  const ownerRows = await fetchRest(ownerQuery, headers);
+  if (ownerRows?.length) return ownerRows[0];
+
+  const authorBase = `${supabaseUrl}/rest/v1/projects?published=eq.true&author_username=eq.${encodeURIComponent(username)}&select=title,subtitle,author_name,owner_username,author_username,published_pages,published_tabs,short_id,slug,published_at`;
+  const authorQuery = slug
+    ? `${authorBase}&slug=eq.${encodeURIComponent(slug)}&limit=1`
+    : `${authorBase}&order=published_at.desc&limit=1`;
+  const authorRows = await fetchRest(authorQuery, headers);
+  if (!authorRows?.length) return null;
+  return authorRows[0];
+}
+
+async function fetchPublishedProjectByShortId({ supabaseUrl, headers, shortId }) {
+  const ownerRows = await fetchRest(
+    `${supabaseUrl}/rest/v1/projects?short_id=eq.${encodeURIComponent(shortId)}&published=eq.true&select=title,subtitle,author_name,owner_username,author_username,published_pages,published_tabs,short_id,slug&limit=1`,
+    headers,
+  );
+  if (!ownerRows?.length) return null;
+  return ownerRows[0];
 }
 
 function buildOgHtml({ title, description, canonicalUrl, ogImageUrl, author }) {
@@ -157,15 +196,15 @@ export default async function middleware(request) {
       const canonicalUsername = await resolveCanonicalUsername(username, supabaseUrl, headers);
       if (!canonicalUsername) return;
 
-      const base = `${supabaseUrl}/rest/v1/projects?published=eq.true&owner_username=eq.${encodeURIComponent(canonicalUsername)}&select=title,subtitle,author_name,owner_username,published_pages,published_tabs,short_id,slug,published_at`;
-      const query = slug
-        ? `${base}&slug=eq.${encodeURIComponent(slug)}&limit=1`
-        : `${base}&order=published_at.desc&limit=1`;
-
-      const rows = await fetchRest(query, headers);
-      if (!rows?.length) return;
-      const project = rows[0];
-      const canonicalUrl = `${url.origin}/${project.owner_username}/${project.slug}`;
+      const project = await fetchPublishedProjectByPath({
+        supabaseUrl,
+        headers,
+        username: canonicalUsername,
+        slug,
+      });
+      if (!project) return;
+      const canonicalProjectUsername = String(project.owner_username || project.author_username || canonicalUsername || '').toLowerCase();
+      const canonicalUrl = `${url.origin}/${canonicalProjectUsername}/${project.slug}`;
 
       if (isRealBrowser(request) && url.pathname !== new URL(canonicalUrl).pathname) {
         return Response.redirect(canonicalUrl, 301);
@@ -218,15 +257,12 @@ export default async function middleware(request) {
   };
 
   try {
-    const rows = await fetchRest(
-      `${supabaseUrl}/rest/v1/projects?short_id=eq.${encodeURIComponent(shortId)}&published=eq.true&select=title,subtitle,author_name,owner_username,published_pages,published_tabs,short_id,slug&limit=1`,
-      headers,
-    );
-    if (!rows?.length) return;
+    const project = await fetchPublishedProjectByShortId({ supabaseUrl, headers, shortId });
+    if (!project) return;
 
-    const project = rows[0];
-    const canonicalUrl = project.owner_username
-      ? `${url.origin}/${project.owner_username}/${project.slug || 'essay'}`
+    const canonicalProjectUsername = String(project.owner_username || project.author_username || '').toLowerCase();
+    const canonicalUrl = canonicalProjectUsername
+      ? `${url.origin}/${canonicalProjectUsername}/${project.slug || 'essay'}`
       : `${url.origin}/read/${project.short_id}/${project.slug || 'essay'}`;
 
     if (isRealBrowser(request)) {

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import styles from './App.module.css';
 import useAuth from './hooks/useAuth';
@@ -42,11 +42,6 @@ function RedirectToLatestProject() {
       return;
     }
 
-    if (requiresOnboarding) {
-      navigate('/onboarding', { replace: true });
-      return;
-    }
-
     setShowHome(false);
     let cancelled = false;
 
@@ -59,6 +54,10 @@ function RedirectToLatestProject() {
         if (projects.length > 0) {
           navigate(`/projects/${projects[0].id}`, { replace: true });
         } else {
+          if (requiresOnboarding) {
+            setShowHome(true);
+            return;
+          }
           // First login — create a blank project and land on it.
           const starterProject = await createWritingProject(
             '',
@@ -80,26 +79,33 @@ function RedirectToLatestProject() {
 }
 
 function ProjectRoute() {
-  const { session, loading, profileLoading, requiresOnboarding } = useAuth();
+  const { session, loading, profileLoading } = useAuth();
 
   if (loading || profileLoading) {
     return <GlobalLoader />;
   }
 
   if (!session) return <Navigate to="/" replace />;
-  if (requiresOnboarding) return <Navigate to="/onboarding" replace />;
   return <FocusPage />;
 }
 
-function OnboardingRoute() {
-  const { session, loading, profileLoading } = useAuth();
-
-  if (loading || profileLoading) return <GlobalLoader />;
-  if (!session) return <Navigate to="/" replace />;
-  return <OnboardingPage />;
-}
-
 export default function App() {
+  const { session, loading, profileLoading, requiresOnboarding } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const searchParams = new URLSearchParams(location.search);
+  const forcedOnboarding = searchParams.get('onboarding') === '1';
+  const showBlockingOnboarding = !!session?.user
+    && !loading
+    && !profileLoading
+    && (requiresOnboarding || forcedOnboarding)
+    && !['/login', '/signup', '/auth/confirm', '/reset-password'].includes(location.pathname);
+
+  const clearOnboardingQuery = () => {
+    if (!forcedOnboarding) return;
+    navigate(location.pathname, { replace: true });
+  };
+
   return (
     <div className={styles.app}>
       <EnvironmentBanner />
@@ -117,12 +123,20 @@ export default function App() {
           <Route path="/forgot-password" element={<Navigate to="/" replace />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
-          <Route path="/onboarding" element={<OnboardingRoute />} />
+          <Route path="/onboarding" element={<Navigate to="/?onboarding=1" replace />} />
           <Route path="/auth/confirm" element={<AuthConfirmPage />} />
           <Route path="/:username/:slug" element={<ReadPage />} />
           <Route path="/:username" element={<ReadPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {showBlockingOnboarding ? (
+          <OnboardingPage
+            blocking
+            lockAtFirstStep={requiresOnboarding}
+            onDone={clearOnboardingQuery}
+            onRequestClose={clearOnboardingQuery}
+          />
+        ) : null}
       </Suspense>
       <Toaster
         position="bottom-right"

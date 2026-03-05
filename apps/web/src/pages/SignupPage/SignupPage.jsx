@@ -19,9 +19,24 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const autoStartedRef = useRef(false);
+  const isOAuthReturn = (() => {
+    const search = new URLSearchParams(window.location.search);
+    const hash = window.location.hash || '';
+    return (
+      search.has('code')
+      || search.has('state')
+      || search.has('error')
+      || hash.includes('access_token=')
+      || hash.includes('refresh_token=')
+      || hash.includes('error=')
+    );
+  })();
 
   useEffect(() => {
-    if (session || autoStartedRef.current || navigator.webdriver) return;
+    if (session || autoStartedRef.current || navigator.webdriver || isOAuthReturn) {
+      if (isOAuthReturn) setLoading(false);
+      return;
+    }
 
     autoStartedRef.current = true;
 
@@ -30,7 +45,7 @@ export default function SignupPage() {
         setError(err?.message || 'No se pudo abrir Google. Intenta de nuevo.');
       })
       .finally(() => setLoading(false));
-  }, [session, signInWithGoogle]);
+  }, [isOAuthReturn, session, signInWithGoogle]);
 
   if (session) return <Navigate to="/" replace />;
 

@@ -18,40 +18,29 @@
   border-radius: 4px;
   padding: 2px 4px;
   min-width: 20px;
-  font-family: 'Geist Mono', monospace;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 700;
+  font-family: var(--font-code);
+  font-size: var(--mono-sm-size);
+  line-height: var(--mono-sm-line);
+  letter-spacing: var(--mono-sm-spacing);
+  font-weight: var(--mono-sm-weight);
   text-transform: uppercase;
 }
 
-.dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(40, 36, 31, 0.08);
-  border: 1px solid rgba(40, 36, 31, 0.16);
+.checkIcon {
+  color: var(--border-subtle);
+  flex-shrink: 0;
 }
 
-.dotChecked {
-  background: #7ac89a;
-  border-color: #7ac89a;
-}
-
-.dotChecked::after {
-  content: '';
-  display: block;
-  width: 8px;
-  height: 4px;
-  border-left: 2px solid #fff;
-  border-bottom: 2px solid #fff;
-  transform: rotate(-45deg);
-  margin: 5px 0 0 4px;
+.checkIconChecked {
+  color: var(--success);
 }
 
 .description {
   margin: 0;
   color: var(--text-dim);
-  font-size: var(--font-xs);
-  line-height: 16px;
+  font-family: var(--font-reading);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-line);
+  letter-spacing: var(--text-sm-spacing);
+  font-weight: var(--weight-medium);
 }

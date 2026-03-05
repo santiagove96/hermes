@@ -1,0 +1,7 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 40%, transparent);
+  backdrop-filter: blur(1px);
+  z-index: 640;
+}

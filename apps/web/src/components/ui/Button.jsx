@@ -24,7 +24,7 @@ const Button = forwardRef(function Button({
   const isDisabled = disabled || state === 'disabled' || isLoading;
   const isHovered = state === 'hovered';
   const isFocused = state === 'focused';
-  const iconSize = 16;
+  const iconSize = size === 'lg' ? 20 : 16;
 
   const leading = isLoading ? (
     <CircleNotch

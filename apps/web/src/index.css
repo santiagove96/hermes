@@ -50,10 +50,11 @@
 /* ===== LIGHT THEME (default) ===== */
 :root {
   color-scheme: light;
-  --bg-base: #f5f3f0;
-  --bg-surface: #fcfaf7;
-  --bg-overlay: #edebe8;
-  --bg-hover: #ffffff;
+  --bg-base: #F5F3F0FF;
+  --bg-surface: #F5F3F0FF;
+  --bg-surface-accent: #F0EEEBFF;
+  --bg-overlay: #E8E6E3FF;
+  --bg-hover: #F7F5F2FF;
   --text-primary: #28241f;
   --text-muted: rgba(40, 36, 31, 0.8);
   --text-dim: rgba(40, 36, 31, 0.64);
@@ -148,6 +149,10 @@
   --type-mono-xs-line: 16px;
   --type-mono-xs-weight: 600;
   --type-mono-xs-tracking: 0.4px;
+  --mono-sm-size: 14px;
+  --mono-sm-line: 20px;
+  --mono-sm-spacing: 0px;
+  --mono-sm-weight: 700;
 
   /* Semantic typography tokens (UI / body) */
   --text-xl-size: 20px;
@@ -172,7 +177,7 @@
 
   /* Semantic typography tokens (heading / display) */
   --display-sm-size: 40px;
-  --display-sm-line: 48px;
+  --display-sm-line: 40px;
   --display-sm-spacing: -1px;
 
   --heading-lg-size: 48px;
@@ -203,10 +208,11 @@
 
 :root[data-theme='dark'],
 :root[data-theme='system'][data-resolved-theme='dark'] {
-  --bg-base: #1d1c1a;
-  --bg-surface: #201f1d;
-  --bg-overlay: #292825;
-  --bg-hover: #292825;
+  --bg-base: #1D1C1AFF;
+  --bg-surface: #1D1C1AFF;
+  --bg-surface-accent: #242220FF;
+  --bg-overlay: #2E2C2AFF;
+  --bg-hover: #292725FF;
   --text-primary: #f5f3f0;
   --text-muted: #f5f3f0cc;
   --text-dim: #f5f3f0a3;

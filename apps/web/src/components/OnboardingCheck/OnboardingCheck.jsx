@@ -1,3 +1,4 @@
+import { CheckCircle } from '@phosphor-icons/react';
 import styles from './OnboardingCheck.module.css';
 
 export default function OnboardingCheck({ label, description, checked = false }) {
@@ -5,7 +6,12 @@ export default function OnboardingCheck({ label, description, checked = false })
     <div className={styles.item}>
       <div className={styles.header}>
         <span className={styles.tag}>{label}</span>
-        <span className={`${styles.dot} ${checked ? styles.dotChecked : ''}`} aria-hidden="true" />
+        <CheckCircle
+          size={20}
+          weight="fill"
+          aria-hidden="true"
+          className={`${styles.checkIcon} ${checked ? styles.checkIconChecked : ''}`}
+        />
       </div>
       <p className={styles.description}>{description}</p>
     </div>

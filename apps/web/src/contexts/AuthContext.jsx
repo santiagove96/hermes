@@ -142,7 +142,7 @@ export default function AuthProvider({ children }) {
     }
     return supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: getWebAuthRedirectPath('/login') },
+      options: { redirectTo: getWebAuthRedirectPath('/') },
     });
   };
 

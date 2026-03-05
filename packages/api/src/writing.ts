@@ -71,6 +71,7 @@ export interface WritingProjectRow {
   short_id: string | null;
   slug: string | null;
   author_name: string;
+  author_username?: string | null;
   owner_username?: string | null;
   owner_full_name?: string | null;
   published_tabs: string[];
@@ -151,6 +152,7 @@ function authHeaders(accessToken?: string): HeadersInit {
 }
 
 export function toWritingProject(row: WritingProjectRow): WritingProject {
+  const resolvedOwnerUsername = row.owner_username ?? row.author_username ?? null;
   return {
     id: row.id,
     userId: row.user_id,
@@ -164,14 +166,22 @@ export function toWritingProject(row: WritingProjectRow): WritingProject {
     shortId: row.short_id ?? null,
     slug: row.slug ?? null,
     authorName: row.author_name ?? '',
-    ownerUsername: row.owner_username ?? null,
-    ownerFullName: row.owner_full_name ?? null,
+    ownerUsername: resolvedOwnerUsername,
+    ownerFullName: row.owner_full_name ?? (row.author_name ?? null),
     publishedTabs: row.published_tabs ?? [],
     publishedPages: (row.published_pages as Record<string, string>) || {},
     publishedAt: row.published_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function isSchemaMismatchError(error: unknown): boolean {
+  const code = String((error as { code?: string } | null)?.code || '');
+  const message = String((error as { message?: string } | null)?.message || '').toLowerCase();
+  return code === '42703' || code === 'PGRST202' || code === 'PGRST204' || code === 'PGRST205'
+    || message.includes('does not exist')
+    || message.includes('schema cache');
 }
 
 export async function fetchWritingProjects(): Promise<WritingProject[]> {
@@ -562,7 +572,8 @@ type PublishedEssayRow = {
   title: string;
   subtitle: string | null;
   author_name: string | null;
-  owner_username: string | null;
+  author_username?: string | null;
+  owner_username?: string | null;
   published_pages: Record<string, string> | null;
   published_tabs: string[] | null;
   published_at: string | null;
@@ -583,7 +594,7 @@ function toPublishedEssay(row: PublishedEssayRow): PublishedEssay {
     title: row.title,
     subtitle: row.subtitle ?? '',
     authorName: row.author_name ?? '',
-    ownerUsername: row.owner_username ?? null,
+    ownerUsername: row.owner_username ?? row.author_username ?? null,
     pages: filteredPages,
     publishedTabs: row.published_tabs || [],
     publishedAt: row.published_at || new Date(0).toISOString(),
@@ -596,24 +607,57 @@ async function resolveCanonicalUsername(inputUsername: string): Promise<string |
   const normalized = String(inputUsername || '').trim().toLowerCase();
   if (!normalized) return null;
 
-  const { data: profileData, error: profileError } = await getSupabase()
-    .from('user_profiles')
-    .select('username')
-    .eq('username', normalized)
-    .limit(1);
+  try {
+    const { data: profileData, error: profileError } = await getSupabase()
+      .from('profiles')
+      .select('username')
+      .eq('username', normalized)
+      .limit(1);
+    if (profileError) throw profileError;
+    const direct = profileData?.[0] as { username?: string | null } | undefined;
+    if (direct?.username) return String(direct.username).toLowerCase();
+  } catch (error) {
+    if (!isSchemaMismatchError(error)) throw error;
+  }
 
-  if (profileError) throw profileError;
-  const direct = profileData?.[0] as { username?: string | null } | undefined;
-  if (direct?.username) return String(direct.username).toLowerCase();
+  try {
+    const { data: profileData, error: profileError } = await getSupabase()
+      .from('user_profiles')
+      .select('username')
+      .eq('username', normalized)
+      .limit(1);
+
+    if (profileError) throw profileError;
+    const direct = profileData?.[0] as { username?: string | null } | undefined;
+    if (direct?.username) return String(direct.username).toLowerCase();
+  } catch (error) {
+    if (!isSchemaMismatchError(error)) throw error;
+  }
 
   const { data: aliasData, error: aliasError } = await getSupabase()
     .from('user_profile_username_aliases')
     .select('user_id')
     .eq('username', normalized)
     .limit(1);
-  if (aliasError) throw aliasError;
+  if (aliasError) {
+    if (isSchemaMismatchError(aliasError)) return null;
+    throw aliasError;
+  }
   const alias = aliasData?.[0] as { user_id?: string } | undefined;
   if (!alias?.user_id) return null;
+
+  try {
+    const { data: currentProfile, error: currentError } = await getSupabase()
+      .from('profiles')
+      .select('username')
+      .eq('user_id', alias.user_id)
+      .limit(1);
+    if (currentError) throw currentError;
+    const canonical = currentProfile?.[0] as { username?: string | null } | undefined;
+    if (canonical?.username) return String(canonical.username).toLowerCase();
+  } catch (error) {
+    if (!isSchemaMismatchError(error)) throw error;
+  }
 
   const { data: currentProfile, error: currentError } = await getSupabase()
     .from('user_profiles')
@@ -623,6 +667,34 @@ async function resolveCanonicalUsername(inputUsername: string): Promise<string |
   if (currentError) throw currentError;
   const canonical = currentProfile?.[0] as { username?: string | null } | undefined;
   return canonical?.username ? String(canonical.username).toLowerCase() : null;
+}
+
+async function fetchPublicIdentityForCurrentUser(userId: string): Promise<{ username: string; fullName: string }> {
+  try {
+    const { data, error } = await getSupabase()
+      .from('profiles')
+      .select('full_name, username')
+      .eq('user_id', userId)
+      .single();
+    if (error) throw error;
+    return {
+      username: String(data?.username || '').trim().toLowerCase(),
+      fullName: String(data?.full_name || '').trim(),
+    };
+  } catch (error) {
+    if (!isSchemaMismatchError(error)) throw error;
+  }
+
+  const { data, error } = await getSupabase()
+    .from('user_profiles')
+    .select('full_name, username')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return {
+    username: String(data?.username || '').trim().toLowerCase(),
+    fullName: String(data?.full_name || '').trim(),
+  };
 }
 
 export async function publishProject(
@@ -636,18 +708,12 @@ export async function publishProject(
   const { data: { user } } = await getSupabase().auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: profileData, error: profileError } = await getSupabase()
-    .from('user_profiles')
-    .select('full_name, username')
-    .eq('id', user.id)
-    .single();
-  if (profileError) throw profileError;
-
-  const ownerUsername = String(profileData?.username || '').trim().toLowerCase();
+  const identity = await fetchPublicIdentityForCurrentUser(user.id);
+  const ownerUsername = identity.username;
   if (!ownerUsername) {
     throw new Error('Complete onboarding to publish with a public username.');
   }
-  const ownerFullName = String(profileData?.full_name || '').trim() || String(authorName || '').trim();
+  const ownerFullName = identity.fullName || String(authorName || '').trim();
 
   const shortId = existing?.shortId || generateShortId();
   const baseSlug = generateSlug(existing?.title || 'untitled');
@@ -662,9 +728,30 @@ export async function publishProject(
     }
   }
 
-  const { data, error } = await getSupabase()
-    .from('projects')
-    .update({
+  const candidatePayloads: Array<Record<string, unknown>> = [
+    {
+      published: true,
+      short_id: shortId,
+      slug,
+      author_name: ownerFullName,
+      author_username: ownerUsername,
+      owner_username: ownerUsername,
+      owner_full_name: ownerFullName,
+      published_tabs: publishedTabs,
+      published_pages: publishedPages,
+      published_at: new Date().toISOString(),
+    },
+    {
+      published: true,
+      short_id: shortId,
+      slug,
+      author_name: ownerFullName,
+      author_username: ownerUsername,
+      published_tabs: publishedTabs,
+      published_pages: publishedPages,
+      published_at: new Date().toISOString(),
+    },
+    {
       published: true,
       short_id: shortId,
       slug,
@@ -674,14 +761,29 @@ export async function publishProject(
       published_tabs: publishedTabs,
       published_pages: publishedPages,
       published_at: new Date().toISOString(),
-    })
-    .eq('id', projectId)
-    .select('*')
-    .single<WritingProjectRow>();
+    },
+  ];
 
-  if (error) throw error;
-  invalidateProject(projectId);
-  return toWritingProject(data);
+  let lastError: unknown = null;
+  for (const payload of candidatePayloads) {
+    const { data, error } = await getSupabase()
+      .from('projects')
+      .update(payload)
+      .eq('id', projectId)
+      .select('*')
+      .single<WritingProjectRow>();
+
+    if (!error) {
+      invalidateProject(projectId);
+      return toWritingProject(data);
+    }
+    lastError = error;
+    if (!isSchemaMismatchError(error)) {
+      throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('No se pudo publicar el proyecto.');
 }
 
 export async function unpublishProject(projectId: string): Promise<WritingProject> {
@@ -702,19 +804,28 @@ export async function fetchPublishedEssay(shortId: string): Promise<PublishedEss
 }
 
 export async function fetchPublishedEssayByShortId(shortId: string): Promise<PublishedEssay | null> {
-  const { data, error } = await getSupabase()
-    .from('projects')
-    .select('title, subtitle, author_name, owner_username, published_pages, published_tabs, published_at, short_id, slug')
-    .eq('short_id', shortId)
-    .eq('published', true)
-    .single<PublishedEssayRow>();
+  const selectCandidates = [
+    'title, subtitle, author_name, owner_username, author_username, published_pages, published_tabs, published_at, short_id, slug',
+    'title, subtitle, author_name, author_username, published_pages, published_tabs, published_at, short_id, slug',
+    'title, subtitle, author_name, owner_username, published_pages, published_tabs, published_at, short_id, slug',
+  ];
 
-  if (error) {
+  let lastError: unknown = null;
+  for (const select of selectCandidates) {
+    const { data, error } = await getSupabase()
+      .from('projects')
+      .select(select)
+      .eq('short_id', shortId)
+      .eq('published', true)
+      .single<PublishedEssayRow>();
+
+    if (!error) return toPublishedEssay(data);
     if ((error as { code?: string }).code === 'PGRST116') return null;
-    throw error;
+    lastError = error;
+    if (!isSchemaMismatchError(error)) throw error;
   }
 
-  return toPublishedEssay(data);
+  throw lastError instanceof Error ? lastError : new Error('No se pudo cargar el proyecto publicado.');
 }
 
 export function buildCanonicalPublicUrl(input: { username: string; slug: string }): string {
@@ -727,20 +838,39 @@ export async function fetchPublishedEssayByPath(input: { username: string; slug?
   const canonicalUsername = await resolveCanonicalUsername(input.username);
   if (!canonicalUsername) return null;
 
-  const baseQuery = getSupabase()
-    .from('projects')
-    .select('title, subtitle, author_name, owner_username, published_pages, published_tabs, published_at, short_id, slug')
-    .eq('published', true)
-    .eq('owner_username', canonicalUsername);
+  const candidates = [
+    {
+      select: 'title, subtitle, author_name, owner_username, author_username, published_pages, published_tabs, published_at, short_id, slug',
+      usernameField: 'owner_username',
+    },
+    {
+      select: 'title, subtitle, author_name, author_username, published_pages, published_tabs, published_at, short_id, slug',
+      usernameField: 'author_username',
+    },
+  ] as const;
 
-  const query = input.slug
-    ? baseQuery.eq('slug', input.slug).limit(1)
-    : baseQuery.order('published_at', { ascending: false }).limit(1);
+  let lastError: unknown = null;
+  for (const candidate of candidates) {
+    const baseQuery = getSupabase()
+      .from('projects')
+      .select(candidate.select)
+      .eq('published', true)
+      .eq(candidate.usernameField, canonicalUsername);
 
-  const { data, error } = await query;
-  if (error) throw error;
-  if (!data?.length) return null;
-  return toPublishedEssay(data[0] as PublishedEssayRow);
+    const query = input.slug
+      ? baseQuery.eq('slug', input.slug).limit(1)
+      : baseQuery.order('published_at', { ascending: false }).limit(1);
+
+    const { data, error } = await query;
+    if (!error) {
+      if (!data?.length) return null;
+      return toPublishedEssay(data[0] as PublishedEssayRow);
+    }
+    lastError = error;
+    if (!isSchemaMismatchError(error)) throw error;
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('No se pudo resolver la URL pública.');
 }
 
 export function getFallbackHomeEssay(): PublishedEssay {
@@ -768,7 +898,7 @@ export async function fetchHomeEssay(): Promise<PublishedEssay> {
 
 export async function updatePublishSettings(
   projectId: string,
-  updates: Partial<{ author_name: string; published_tabs: string[]; slug: string; owner_username: string; owner_full_name: string }>,
+  updates: Partial<{ author_name: string; published_tabs: string[]; slug: string; owner_username: string; owner_full_name: string; author_username: string }>,
 ): Promise<WritingProject> {
   const payload = { ...updates } as Record<string, unknown>;
   if (typeof payload.slug === 'string') {

@@ -2,25 +2,26 @@ import { memo, useEffect, useRef } from 'react';
 import styles from './HighlightPopover.module.css';
 
 const TYPE_LABELS = {
-  question: 'Question',
-  suggestion: 'Suggestion',
-  edit: 'Edit',
-  voice: 'Voice',
-  weakness: 'Weakness',
-  evidence: 'Evidence',
-  wordiness: 'Wordiness',
-  factcheck: 'Fact Check',
-  spoken: 'Spoken',
+  question: 'Pregunta',
+  suggestion: 'Sugerencia',
+  edit: 'Edición',
+  voice: 'Voz',
+  weakness: 'Debilidad',
+  evidence: 'Evidencia',
+  wordiness: 'Verbosidad',
+  factcheck: 'Verificar',
+  spoken: 'Al hablar',
   intro: 'Intro',
-  outro: 'Outro',
+  outro: 'Cierre',
 };
 
 export default memo(function HighlightPopover({
   highlight,
   rect,
+  boundaryRect = null,
+  zIndex = null,
   onDismiss,
   onAcceptEdit,
-  onReply,
 }) {
   const popoverRef = useRef(null);
 
@@ -54,15 +55,40 @@ export default memo(function HighlightPopover({
 
   if (!highlight || !rect) return null;
 
-  // Position below the highlight, centered horizontally
-  const top = rect.bottom + 8;
-  const left = rect.left + rect.width / 2;
+  // Position below the highlight, centered horizontally.
+  // When boundaryRect is provided (onboarding), keep popover contained in that box.
+  const fallbackTop = rect.bottom + 8;
+  const fallbackLeft = rect.left + rect.width / 2;
+  const estimatedWidth = 320;
+  const estimatedHalf = estimatedWidth / 2;
+  const estimatedHeight = 220;
+  let top = fallbackTop;
+  let left = fallbackLeft;
+
+  if (boundaryRect) {
+    const minTop = boundaryRect.top + 8;
+    const maxBottom = boundaryRect.bottom - 8;
+    const minLeft = boundaryRect.left + estimatedHalf + 8;
+    const maxLeft = boundaryRect.right - estimatedHalf - 8;
+
+    top = rect.bottom + 8;
+    if (top + estimatedHeight > maxBottom) {
+      top = rect.top - estimatedHeight - 8;
+    }
+    if (top < minTop) top = minTop;
+
+    if (minLeft <= maxLeft) {
+      left = Math.max(minLeft, Math.min(fallbackLeft, maxLeft));
+    } else {
+      left = boundaryRect.left + boundaryRect.width / 2;
+    }
+  }
 
   return (
     <div
       ref={popoverRef}
       className={styles.popover}
-      style={{ top, left }}
+      style={{ top, left, zIndex: zIndex ?? undefined }}
     >
       <div className={`${styles.badge} ${styles[`badge_${highlight.type}`]}`}>
         {TYPE_LABELS[highlight.type]}
@@ -71,37 +97,27 @@ export default memo(function HighlightPopover({
 
       {(highlight.type === 'edit' || highlight.type === 'wordiness') && highlight.suggestedEdit && (
         <div className={styles.editPreview}>
-          <div className={styles.editLabel}>Suggested replacement:</div>
+          <div className={styles.editLabel}>Sugerencia de reemplazo:</div>
           <div className={styles.editText}>{highlight.suggestedEdit}</div>
         </div>
       )}
 
       <div className={styles.actions}>
-        {(highlight.type === 'edit' || highlight.type === 'wordiness') && highlight.suggestedEdit ? (
-          <>
-            <button
-              className={styles.acceptBtn}
-              onClick={() => onAcceptEdit(highlight)}
-            >
-              Accept
-            </button>
-            <button className={styles.dismissBtn} onClick={() => onDismiss(highlight.id)}>
-              Dismiss
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              className={styles.replyBtn}
-              onClick={() => onReply(highlight)}
-            >
-              Reply
-            </button>
-            <button className={styles.dismissBtn} onClick={() => onDismiss(highlight.id)}>
-              Dismiss
-            </button>
-          </>
-        )}
+        <button
+          className={styles.acceptBtn}
+          onClick={() => {
+            if ((highlight.type === 'edit' || highlight.type === 'wordiness') && highlight.suggestedEdit) {
+              onAcceptEdit(highlight);
+              return;
+            }
+            onDismiss(highlight.id);
+          }}
+        >
+          Aceptar
+        </button>
+        <button className={styles.dismissBtn} onClick={() => onDismiss(highlight.id)}>
+          Descartar
+        </button>
       </div>
     </div>
   );
