@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import posthog from 'posthog-js';
 import { publishProject, unpublishProject, updatePublishSettings, generateSlug } from '@hermes/api';
+import { track } from '../../lib/analytics';
 import useLanguage from '../../hooks/useLanguage';
 import styles from './ShareButton.module.css';
 
@@ -97,7 +97,7 @@ export default function ShareButton({
         publishedTabs: result.publishedTabs,
         publishedAt: result.publishedAt,
       });
-      posthog.capture('project_published', {
+      track('project_published', {
         tabs_count: result.publishedTabs?.length || 0,
         has_author_name: !!authorName.trim(),
       });

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import posthog from 'posthog-js';
 import { getProUpgradeUrl, createPortalSession } from '@hermes/api';
+import { track } from '../../lib/analytics';
 import useAuth from '../../hooks/useAuth';
 import useUsage from '../../hooks/useUsage';
 import styles from './UpgradePage.module.css';
@@ -59,7 +59,7 @@ export default function UpgradePage() {
           href={getProUpgradeUrl(session?.user?.id || '')}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => posthog.capture('upgrade_clicked', { source: 'upgrade_page' })}
+          onClick={() => track('upgrade_clicked', { source: 'upgrade_page' })}
         >
           Become a Patron — $15/mo
         </a>

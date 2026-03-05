@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react';
-import posthog from 'posthog-js';
 import toast from 'react-hot-toast';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -34,6 +33,7 @@ import Button from '../../components/ui/Button';
 import Navbar from '../../components/ui/Navbar';
 import { shareSelectionStory } from '../../lib/shareSelection';
 import { getPlainTextFromBlocks, getShareBlocksFromEditorSelection } from '../../lib/shareSelectionBlocks';
+import { track } from '../../lib/analytics';
 import styles from './FocusPage.module.css';
 
 function looksLikeMarkdown(text) {
@@ -591,7 +591,7 @@ export default function FocusPage() {
       }
     }
 
-    posthog.capture('highlight_accepted', { type: highlight.type });
+    track('highlight_accepted', { type: highlight.type });
     dismissHighlight(highlight.id);
   }, [editor, dismissHighlight]);
 
@@ -599,7 +599,7 @@ export default function FocusPage() {
   const handleDismissHighlight = useCallback((id) => {
     if (id) {
       const h = highlights.find(hl => hl.id === id);
-      posthog.capture('highlight_dismissed', { type: h?.type });
+      track('highlight_dismissed', { type: h?.type });
       dismissHighlight(id);
     } else {
       clearHighlight();
@@ -608,7 +608,7 @@ export default function FocusPage() {
 
   // Reply from highlight: focus chat with context
   const handleReply = useCallback((highlight) => {
-    posthog.capture('highlight_replied', { type: highlight.type });
+    track('highlight_replied', { type: highlight.type });
     const prefill = `Re: "${highlight.matchText.slice(0, 50)}${highlight.matchText.length > 50 ? '...' : ''}" — `;
     window.__hermesChatFocus?.(prefill);
     clearHighlight();
@@ -703,7 +703,7 @@ export default function FocusPage() {
     setProjectSubtitle(trimmed);
     try {
       await updateWritingProject(projectId, { subtitle: trimmed });
-      posthog.capture('subtitle_updated', {
+      track('subtitle_updated', {
         action: projectSubtitle ? 'edited' : 'added',
         is_empty: !trimmed,
       });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import posthog from 'posthog-js';
 import { createPortalSession } from '@hermes/api';
+import { track } from '../../lib/analytics';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
 import useUsage from '../../hooks/useUsage';
@@ -219,7 +219,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                     <Link
                       className={styles.billingActionBtn}
                       to="/upgrade"
-                      onClick={() => { posthog.capture('upgrade_clicked', { source: 'billing_menu' }); closeDropdown(); }}
+                      onClick={() => { track('upgrade_clicked', { source: 'billing_menu' }); closeDropdown(); }}
                     >
                       {ui.becomePatron}
                     </Link>
@@ -234,7 +234,7 @@ export default function UserMenu({ onDropdownOpen, onDropdownClose }) {
                     <Link
                       className={styles.billingActionBtn}
                       to="/upgrade"
-                      onClick={() => { posthog.capture('upgrade_clicked', { source: 'billing_menu' }); closeDropdown(); }}
+                      onClick={() => { track('upgrade_clicked', { source: 'billing_menu' }); closeDropdown(); }}
                     >
                       {ui.becomePatron}
                     </Link>

@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X } from '@phosphor-icons/react';
-import posthog from 'posthog-js';
 import { fetchAssistantConversation, startAssistantStream } from '@hermes/api';
+import { track } from '../../lib/analytics';
 import useUsage from '../../hooks/useUsage';
 import SourcesPill from './SourcesPill';
 import styles from './FocusChatWindow.module.css';
@@ -113,7 +113,7 @@ export default function FocusChatWindow({ projectId, getPages, activeTab, onHigh
     const userMsg = { role: 'user', content: text, timestamp: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
 
-    posthog.capture('chat_message_sent', {
+    track('chat_message_sent', {
       message_length: text.length,
       conversation_length: messages.length,
     });

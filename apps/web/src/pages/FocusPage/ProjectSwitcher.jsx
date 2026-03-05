@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import posthog from 'posthog-js';
 import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { fetchWritingProjects, fetchWritingProject, createWritingProject, updateWritingProject, deleteWritingProject } from '@hermes/api';
+import { track } from '../../lib/analytics';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
 import DotGridLoader from '../../components/DotGridLoader/DotGridLoader';
@@ -122,7 +122,7 @@ export default function ProjectSwitcher({
     setCreating(true);
     try {
       const project = await createWritingProject('', session.user.id);
-      posthog.capture('project_created');
+      track('project_created');
       closeDropdown();
       navigate(`/projects/${project.id}`);
     } catch {

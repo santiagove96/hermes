@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
-import posthog from 'posthog-js';
 import { activateTrial } from '@hermes/api';
+import { identify, reset } from '../lib/analytics';
 import { supabase, initOfflineAdapter } from '../lib/supabase';
 import { IS_TAURI } from '../lib/platform';
 
@@ -38,7 +38,7 @@ export default function AuthProvider({ children }) {
       setSession(session);
       setLoading(false);
       if (session?.user) {
-        posthog.identify(session.user.id, {
+        identify(session.user.id, {
           email: session.user.email,
           auth_provider: session.user.app_metadata?.provider || 'email',
         });
@@ -50,14 +50,14 @@ export default function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        posthog.identify(session.user.id, {
+        identify(session.user.id, {
           email: session.user.email,
           auth_provider: session.user.app_metadata?.provider || 'email',
         });
         // Initialize offline adapter for Tauri on auth change
         initOfflineAdapter(session.user.id);
       } else {
-        posthog.reset();
+        reset();
       }
     });
 
