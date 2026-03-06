@@ -171,6 +171,12 @@ export default function useHighlights() {
     setPopoverRect(null);
   }, []);
 
+  const openHighlight = useCallback((highlight, rect = null) => {
+    if (!highlight) return;
+    setActiveHighlight(highlight);
+    setPopoverRect(rect);
+  }, []);
+
   const replaceHighlights = useCallback((newHighlights) => {
     highlightsRef.current = newHighlights;
     setHighlights(newHighlights);
@@ -189,6 +195,7 @@ export default function useHighlights() {
     addHighlights,
     dismissHighlight,
     clearHighlight,
+    openHighlight,
     replaceHighlights,
     syncHighlights,
   };

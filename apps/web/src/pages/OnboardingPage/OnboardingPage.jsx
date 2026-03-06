@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -80,6 +80,86 @@ const ONBOARDING_HIGHLIGHTS = [
   },
 ];
 
+const STEP2_DEMO_DELAY = {
+  char: 80,
+  betweenBlocks: 480,
+  commandToSpace: 420,
+  spaceToHelper: 520,
+  dividerLastDash: 260,
+  dividerToRule: 260,
+  initialScan: 2400,
+};
+
+const STEP3_DEMO_DELAY = {
+  initialScan: 2400,
+  cardVisible: 4800,
+  betweenCards: 260,
+};
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    throw new DOMException('Operation aborted', 'AbortError');
+  }
+}
+
+async function waitForMs(ms, signal) {
+  if (ms <= 0) return;
+
+  await new Promise((resolve, reject) => {
+    const timer = window.setTimeout(resolve, ms);
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException('Operation aborted', 'AbortError'));
+    };
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+async function waitForCondition(checkFn, { timeoutMs = 900, intervalMs = 30, signal } = {}) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= timeoutMs) {
+    throwIfAborted(signal);
+    if (checkFn()) return true;
+    await waitForMs(intervalMs, signal);
+  }
+  return false;
+}
+
+async function typeText(editor, text, { reducedMotion = false, signal } = {}) {
+  throwIfAborted(signal);
+  if (!editor || !text) return;
+  if (reducedMotion) {
+    editor.commands.insertContent(text);
+    return;
+  }
+
+  for (const char of text) {
+    throwIfAborted(signal);
+    editor.commands.insertContent(char);
+    await waitForMs(STEP2_DEMO_DELAY.char, signal);
+  }
+}
+
+function removePreviousCharacter(editor) {
+  const { from } = editor.state.selection;
+  if (from <= 1) return;
+  editor.commands.deleteRange({ from: from - 1, to: from });
+}
+
+function removePreviousCharacters(editor, count) {
+  const { from } = editor.state.selection;
+  if (from <= 1 || count <= 0) return;
+  editor.commands.deleteRange({ from: Math.max(1, from - count), to: from });
+}
+
+async function simulateCommandAndSpace(editor, commandChar, applyCommand, { reducedMotion = false, signal } = {}) {
+  await typeText(editor, commandChar, { reducedMotion, signal });
+  await waitForMs(reducedMotion ? 20 : STEP2_DEMO_DELAY.commandToSpace, signal);
+  removePreviousCharacter(editor);
+  applyCommand();
+  await waitForMs(reducedMotion ? 20 : STEP2_DEMO_DELAY.spaceToHelper, signal);
+}
+
 function getStep2Completion(editor) {
   if (!editor) return {
     h1: false,
@@ -117,8 +197,6 @@ function usernameReasonText(reason) {
 export default function OnboardingPage({
   blocking = false,
   onDone = null,
-  onRequestClose = null,
-  lockAtFirstStep = false,
 }) {
   const { session, profile, profileLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -140,7 +218,14 @@ export default function OnboardingPage({
     factcheck: false,
     outro: false,
   });
+  const [hasReducedMotion, setHasReducedMotion] = useState(false);
+  const [isStep2DemoRunning, setIsStep2DemoRunning] = useState(false);
+  const [step2DemoDone, setStep2DemoDone] = useState(false);
+  const [step3DemoDone, setStep3DemoDone] = useState(false);
   const usernameRequestRef = useRef(0);
+  const demoAbortRef = useRef(null);
+  const step3AutoResolveRef = useRef(null);
+  const step3ActiveHighlightRef = useRef(null);
   const step3FocusPreviewRef = useRef(null);
   const { focusExtension, syncFocusMode } = useFocusMode();
   const { inlineLinkExtension } = useInlineLink();
@@ -153,6 +238,7 @@ export default function OnboardingPage({
     syncHighlights: syncStep3Highlights,
     clearHighlight: clearStep3Highlight,
     dismissHighlight: dismissStep3Highlight,
+    openHighlight: openStep3Highlight,
   } = useHighlights();
 
   const editor = useEditor({
@@ -189,12 +275,46 @@ export default function OnboardingPage({
     immediatelyRender: false,
   });
 
+  const abortRunningDemo = useCallback(() => {
+    if (step3AutoResolveRef.current) {
+      window.clearTimeout(step3AutoResolveRef.current);
+      step3AutoResolveRef.current = null;
+    }
+    if (demoAbortRef.current) {
+      demoAbortRef.current.abort();
+      demoAbortRef.current = null;
+    }
+  }, []);
+
+  const resetOnboardingDemos = useCallback(() => {
+    abortRunningDemo();
+    setIsStep2DemoRunning(false);
+    setStep2DemoDone(false);
+    setStep3DemoDone(false);
+    setStep2Checks(getStep2Completion(null));
+    setStep3Checks({
+      intro: false,
+      spoken: false,
+      factcheck: false,
+      outro: false,
+    });
+    clearStep3Highlight();
+  }, [abortRunningDemo, clearStep3Highlight]);
+
   useEffect(() => {
     if (!profileLoading) {
       setFullName(profile?.fullName || '');
       setUsername(profile?.username || '');
     }
   }, [profileLoading, profile?.fullName, profile?.username]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const applyPreference = () => setHasReducedMotion(media.matches);
+    applyPreference();
+    media.addEventListener('change', applyPreference);
+    return () => media.removeEventListener('change', applyPreference);
+  }, []);
 
   useEffect(() => {
     if (step !== 1) return undefined;
@@ -262,15 +382,17 @@ export default function OnboardingPage({
 
   useEffect(() => {
     if (step !== 3) return;
-    setStep3Checks({
-      intro: false,
-      spoken: false,
-      factcheck: false,
-      outro: false,
-    });
-    clearStep3Highlight();
-    replaceStep3Highlights(step3Highlights);
-  }, [step, clearStep3Highlight, replaceStep3Highlights, step3Highlights]);
+    if (!step3DemoDone) {
+      setStep3Checks({
+        intro: false,
+        spoken: false,
+        factcheck: false,
+        outro: false,
+      });
+      clearStep3Highlight();
+      replaceStep3Highlights(step3Highlights);
+    }
+  }, [step, clearStep3Highlight, replaceStep3Highlights, step3Highlights, step3DemoDone]);
 
   useEffect(() => {
     if (!step3Editor || step !== 3) return;
@@ -290,6 +412,240 @@ export default function OnboardingPage({
       return { ...prev, [key]: true };
     });
   }, [step3ActiveHighlight]);
+
+  useEffect(() => {
+    step3ActiveHighlightRef.current = step3ActiveHighlight;
+  }, [step3ActiveHighlight]);
+
+  useEffect(() => () => {
+    abortRunningDemo();
+  }, [abortRunningDemo]);
+
+  useEffect(() => {
+    if (!editor || step !== 2 || step2DemoDone) return undefined;
+
+    const controller = new AbortController();
+    abortRunningDemo();
+    demoAbortRef.current = controller;
+    setIsStep2DemoRunning(true);
+
+    const runStep2Demo = async () => {
+      await waitForCondition(() => !!editor.view?.dom, {
+        timeoutMs: 1200,
+        intervalMs: 40,
+        signal: controller.signal,
+      });
+      throwIfAborted(controller.signal);
+
+      editor.commands.clearContent(true);
+      setStep2Checks(getStep2Completion(null));
+      await waitForMs(hasReducedMotion ? 40 : STEP2_DEMO_DELAY.initialScan, controller.signal);
+
+      editor.chain().focus().setParagraph().run();
+      await simulateCommandAndSpace(
+        editor,
+        '#',
+        () => editor.chain().focus().setNode('heading', { level: 1 }).run(),
+        { reducedMotion: hasReducedMotion, signal: controller.signal },
+      );
+      await typeText(editor, 'Usa # y espacio para crear un título', { reducedMotion: hasReducedMotion, signal: controller.signal });
+      await waitForMs(hasReducedMotion ? 40 : STEP2_DEMO_DELAY.betweenBlocks, controller.signal);
+
+      editor.commands.enter();
+      await simulateCommandAndSpace(
+        editor,
+        '>',
+        () => editor.chain().focus().toggleBlockquote().run(),
+        { reducedMotion: hasReducedMotion, signal: controller.signal },
+      );
+      await typeText(editor, 'Usa > y espacio para crear una cita destacada', { reducedMotion: hasReducedMotion, signal: controller.signal });
+      editor.commands.enter();
+      editor.chain().focus().toggleBlockquote().run();
+      await waitForMs(hasReducedMotion ? 40 : STEP2_DEMO_DELAY.betweenBlocks, controller.signal);
+
+      await simulateCommandAndSpace(
+        editor,
+        '-',
+        () => editor.chain().focus().toggleBulletList().run(),
+        { reducedMotion: hasReducedMotion, signal: controller.signal },
+      );
+      await typeText(editor, 'Usa - y espacio para crear un bullet', { reducedMotion: hasReducedMotion, signal: controller.signal });
+      editor.commands.splitListItem('listItem');
+      await waitForMs(hasReducedMotion ? 20 : STEP2_DEMO_DELAY.commandToSpace, controller.signal);
+      await typeText(editor, 'Usa - y espacio para crear otro bullet', { reducedMotion: hasReducedMotion, signal: controller.signal });
+      editor.commands.enter();
+      editor.commands.enter();
+      await waitForMs(hasReducedMotion ? 30 : 180, controller.signal);
+
+      await typeText(editor, '--', { reducedMotion: hasReducedMotion, signal: controller.signal });
+      await waitForMs(hasReducedMotion ? 20 : STEP2_DEMO_DELAY.dividerLastDash, controller.signal);
+      await typeText(editor, '-', { reducedMotion: hasReducedMotion, signal: controller.signal });
+      await waitForMs(hasReducedMotion ? 20 : STEP2_DEMO_DELAY.dividerToRule, controller.signal);
+      removePreviousCharacters(editor, 3);
+      editor.chain().focus().setHorizontalRule().run();
+      await waitForMs(hasReducedMotion ? 40 : 200, controller.signal);
+    };
+
+    runStep2Demo()
+      .then(() => {
+        if (!controller.signal.aborted) setStep2DemoDone(true);
+      })
+      .catch((error) => {
+        if (error?.name !== 'AbortError') {
+          console.error('Step 2 demo failed', error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsStep2DemoRunning(false);
+          if (demoAbortRef.current === controller) demoAbortRef.current = null;
+        }
+      });
+
+    return () => {
+      controller.abort();
+      if (demoAbortRef.current === controller) demoAbortRef.current = null;
+      setIsStep2DemoRunning(false);
+    };
+  }, [abortRunningDemo, editor, step, step2DemoDone, hasReducedMotion]);
+
+  const handleResolveHighlight = useCallback((action, highlightOverride = null) => {
+    const highlight = highlightOverride || step3ActiveHighlightRef.current;
+    if (!highlight) {
+      clearStep3Highlight();
+      return;
+    }
+
+    setStep3Checks((prev) => {
+      if (!Object.prototype.hasOwnProperty.call(prev, highlight.type) || prev[highlight.type]) return prev;
+      return { ...prev, [highlight.type]: true };
+    });
+
+    if (highlight.id && (action === 'accept' || action === 'dismiss')) {
+      dismissStep3Highlight(highlight.id);
+    } else {
+      clearStep3Highlight();
+    }
+
+    if (step3Editor) {
+      syncStep3Highlights(step3Editor);
+    }
+  }, [clearStep3Highlight, dismissStep3Highlight, step3Editor, syncStep3Highlights]);
+
+  useEffect(() => {
+    if (!step3Editor || step !== 3 || step3DemoDone) return undefined;
+
+    const controller = new AbortController();
+    abortRunningDemo();
+    demoAbortRef.current = controller;
+
+    const ordered = ['intro', 'spoken', 'factcheck', 'outro']
+      .map((type) => step3Highlights.find((h) => h.type === type))
+      .filter(Boolean);
+
+    const openHighlight = async (highlight) => {
+      if (!highlight) return false;
+      const selector = `[data-highlight-id="${highlight.id}"]`;
+      const target = step3FocusPreviewRef.current?.querySelector?.(selector);
+      if (target) {
+        target.scrollIntoView({
+          block: 'center',
+          inline: 'nearest',
+          behavior: hasReducedMotion ? 'auto' : 'smooth',
+        });
+        await waitForMs(hasReducedMotion ? 40 : 260, controller.signal);
+      }
+      const targetAfterScroll = step3FocusPreviewRef.current?.querySelector?.(selector);
+      const boundaryRect = step3FocusPreviewRef.current?.getBoundingClientRect?.() || null;
+      const fallbackRect = boundaryRect
+        ? {
+          top: boundaryRect.top + 44,
+          left: boundaryRect.left + 80,
+          width: 160,
+          height: 18,
+          right: boundaryRect.left + 240,
+          bottom: boundaryRect.top + 62,
+          x: boundaryRect.left + 80,
+          y: boundaryRect.top + 44,
+          toJSON: () => ({}),
+        }
+        : null;
+      const rect = targetAfterScroll?.getBoundingClientRect?.() || target?.getBoundingClientRect?.() || fallbackRect;
+      openStep3Highlight(highlight, rect);
+      return !!rect;
+    };
+
+    const runStep3Demo = async () => {
+      await waitForCondition(() => !!step3Editor.view?.dom, {
+        timeoutMs: 1200,
+        intervalMs: 40,
+        signal: controller.signal,
+      });
+      await waitForMs(hasReducedMotion ? 40 : STEP3_DEMO_DELAY.initialScan, controller.signal);
+
+      for (const highlight of ordered) {
+        throwIfAborted(controller.signal);
+        const opened = await openHighlight(highlight);
+        if (!opened) continue;
+
+        await waitForCondition(
+          () => step3ActiveHighlightRef.current?.id === highlight.id,
+          {
+            timeoutMs: hasReducedMotion ? 240 : 1200,
+            intervalMs: 30,
+            signal: controller.signal,
+          },
+        );
+
+        await waitForMs(hasReducedMotion ? 60 : STEP3_DEMO_DELAY.cardVisible, controller.signal);
+
+        step3AutoResolveRef.current = window.setTimeout(() => {
+          handleResolveHighlight('accept', highlight);
+        }, 0);
+        await waitForMs(hasReducedMotion ? 30 : STEP3_DEMO_DELAY.betweenCards, controller.signal);
+      }
+    };
+
+    runStep3Demo()
+      .then(() => {
+        if (!controller.signal.aborted) setStep3DemoDone(true);
+      })
+      .catch((error) => {
+        if (error?.name !== 'AbortError') {
+          console.error('Step 3 demo failed', error);
+        }
+      })
+      .finally(() => {
+        if (step3AutoResolveRef.current) {
+          window.clearTimeout(step3AutoResolveRef.current);
+          step3AutoResolveRef.current = null;
+        }
+        if (!controller.signal.aborted) {
+          if (demoAbortRef.current === controller) demoAbortRef.current = null;
+        }
+      });
+
+    return () => {
+      controller.abort();
+      if (step3AutoResolveRef.current) {
+        window.clearTimeout(step3AutoResolveRef.current);
+        step3AutoResolveRef.current = null;
+      }
+      if (demoAbortRef.current === controller) demoAbortRef.current = null;
+    };
+  }, [
+    abortRunningDemo,
+    clearStep3Highlight,
+    dismissStep3Highlight,
+    handleResolveHighlight,
+    hasReducedMotion,
+    openStep3Highlight,
+    step,
+    step3DemoDone,
+    step3Editor,
+    step3Highlights,
+    syncStep3Highlights,
+  ]);
 
   if (!session) {
     if (blocking) return null;
@@ -333,13 +689,7 @@ export default function OnboardingPage({
     if (!canFinishStep3 || identitySaving) return;
     const ok = await handleSaveIdentity(true);
     if (ok) {
-      setStep3Checks({
-        intro: false,
-        spoken: false,
-        factcheck: false,
-        outro: false,
-      });
-      clearStep3Highlight();
+      resetOnboardingDemos();
       replaceStep3Highlights(step3Highlights);
       if (typeof onDone === 'function') {
         onDone();
@@ -347,19 +697,6 @@ export default function OnboardingPage({
         navigate('/', { replace: true });
       }
     }
-  };
-
-  const handleBack = () => {
-    if (step === 1) {
-      if (lockAtFirstStep) return;
-      if (typeof onRequestClose === 'function') {
-        onRequestClose();
-      } else {
-        navigate('/', { replace: true });
-      }
-      return;
-    }
-    setStep((prev) => prev - 1);
   };
 
   return (
@@ -430,7 +767,7 @@ export default function OnboardingPage({
 
               <div className={styles.focusPreviewBox}>
                 <div className={styles.step2FocusFrame}>
-                  <div className={`${focusStyles.editorWrap} ${styles.stepFocusEditorWrap} ${styles.step2EditorOnly}`}>
+                  <div className={`${focusStyles.editorWrap} ${styles.stepFocusEditorWrap} ${styles.step2EditorOnly} ${isStep2DemoRunning ? styles.isDemoRunning : ''}`}>
                     <EditorContent editor={editor} />
                   </div>
                 </div>
@@ -476,15 +813,6 @@ export default function OnboardingPage({
           <div className={styles.footerActions}>
             <Button
               type="button"
-              variant="ghost"
-              size="lg"
-              onClick={handleBack}
-              disabled={lockAtFirstStep && step === 1}
-            >
-              Volver
-            </Button>
-            <Button
-              type="button"
               size="lg"
               onClick={handlePrimaryAction}
               disabled={
@@ -505,12 +833,15 @@ export default function OnboardingPage({
         boundaryRect={step3FocusPreviewRef.current?.getBoundingClientRect?.() || null}
         zIndex={700}
         onDismiss={(id) => {
-          if (id) dismissStep3Highlight(id);
-          else clearStep3Highlight();
+          if (id) {
+            const highlight = step3HighlightsState.find((item) => item.id === id) || null;
+            handleResolveHighlight('dismiss', highlight);
+            return;
+          }
+          clearStep3Highlight();
         }}
         onAcceptEdit={(highlight) => {
-          if (highlight?.id) dismissStep3Highlight(highlight.id);
-          else clearStep3Highlight();
+          handleResolveHighlight('accept', highlight);
         }}
       />
     </div>
