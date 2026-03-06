@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react';
 import toast from 'react-hot-toast';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -19,7 +19,6 @@ import useFocusMode from './useFocusMode';
 import useHighlights, { getDocFlatText, flatOffsetToPos } from './useHighlights';
 import useInlineLink from './useInlineLink';
 import LinkTooltip from './LinkTooltip';
-import FocusChatWindow from './FocusChatWindow';
 import HighlightPopover from './HighlightPopover';
 import { EMPTY_PAGES } from './PageTabs';
 import ProjectSwitcher from './ProjectSwitcher';
@@ -27,14 +26,16 @@ import ShareButton from './ShareButton';
 import UserMenu from './UserMenu';
 import AnalyzeMenu from '../../components/AnalyzeMenu/AnalyzeMenu';
 import SignupToast from '../../components/SignupToast/SignupToast';
-import QASimulatorModal from '../../components/QASimulatorModal/QASimulatorModal';
-import FlashcardsView from '../../components/FlashcardsView/FlashcardsView';
 import Button from '../../components/ui/Button';
 import Navbar from '../../components/ui/Navbar';
 import { shareSelectionStory } from '../../lib/shareSelection';
 import { getPlainTextFromBlocks, getShareBlocksFromEditorSelection } from '../../lib/shareSelectionBlocks';
 import { track } from '../../lib/analytics';
 import styles from './FocusPage.module.css';
+
+const FocusChatWindow = lazy(() => import('./FocusChatWindow'));
+const QASimulatorModal = lazy(() => import('../../components/QASimulatorModal/QASimulatorModal'));
+const FlashcardsView = lazy(() => import('../../components/FlashcardsView/FlashcardsView'));
 
 function looksLikeMarkdown(text) {
   return /(?:^|\n)(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|---|\*\*|__|\[.+\]\()/.test(text);
@@ -335,13 +336,14 @@ export default function FocusPage() {
 
     editor.on('selectionUpdate', update);
     editor.on('blur', hide);
-    window.addEventListener('scroll', hide, true);
-    window.addEventListener('resize', hide);
+    const scrollOptions = { capture: true, passive: true };
+    window.addEventListener('scroll', hide, scrollOptions);
+    window.addEventListener('resize', hide, { passive: true });
 
     return () => {
       editor.off('selectionUpdate', update);
       editor.off('blur', hide);
-      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('scroll', hide, scrollOptions);
       window.removeEventListener('resize', hide);
     };
   }, [editor, updateSelectionMenu]);
@@ -1075,38 +1077,44 @@ export default function FocusPage() {
       {/* Link tooltip */}
       <LinkTooltip tooltip={linkTooltip} isMac={isMac} />
 
-      <FlashcardsView
-        open={flashcardsOpen}
-        onClose={() => setFlashcardsOpen(false)}
-        projectId={projectId}
-        session={session}
-        isOffline={isOffline}
-        getPages={getPages}
-      />
+      <Suspense fallback={null}>
+        <FlashcardsView
+          open={flashcardsOpen}
+          onClose={() => setFlashcardsOpen(false)}
+          projectId={projectId}
+          session={session}
+          isOffline={isOffline}
+          getPages={getPages}
+        />
+      </Suspense>
 
       {/* Floating chat window (optional in MVP) */}
       {aiEnabled ? (
         <div className={styles.assistantHidden}>
           <Sentry.ErrorBoundary fallback={<div style={{ position: 'fixed', bottom: 24, left: 24, color: 'var(--text-muted)', fontSize: 13 }}>{t('focusPage.chatUnavailable')}</div>}>
-            <FocusChatWindow
-              projectId={projectId}
-              getPages={getPages}
-              activeTab={activeTab}
-              onHighlights={handleHighlights}
-              session={session}
-              isOffline={isOffline}
-            />
+            <Suspense fallback={null}>
+              <FocusChatWindow
+                projectId={projectId}
+                getPages={getPages}
+                activeTab={activeTab}
+                onHighlights={handleHighlights}
+                session={session}
+                isOffline={isOffline}
+              />
+            </Suspense>
           </Sentry.ErrorBoundary>
         </div>
       ) : null}
 
-      <QASimulatorModal
-        open={qaOpen}
-        onClose={() => setQaOpen(false)}
-        projectId={projectId}
-        session={session}
-        isOffline={isOffline}
-      />
+      <Suspense fallback={null}>
+        <QASimulatorModal
+          open={qaOpen}
+          onClose={() => setQaOpen(false)}
+          projectId={projectId}
+          session={session}
+          isOffline={isOffline}
+        />
+      </Suspense>
 
       <SignupToast wordCount={wordCount} isLoggedIn={isLoggedIn} />
     </div>
