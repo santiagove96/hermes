@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback, useRef } from 'react';
 import { activateTrial, fetchMyProfile } from '@hermes/api';
 import { identify, reset } from '../lib/analytics';
 import { supabase, initOfflineAdapter } from '../lib/supabase';
@@ -20,6 +20,8 @@ export default function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const sessionUserIdRef = useRef(null);
+  const hasProfileRef = useRef(false);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -31,6 +33,14 @@ export default function AuthProvider({ children }) {
       setProfileLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    sessionUserIdRef.current = session?.user?.id || null;
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    hasProfileRef.current = !!profile;
+  }, [profile]);
 
   useEffect(() => {
     // Check for OAuth error in URL hash (e.g. signup rejected)
@@ -64,7 +74,7 @@ export default function AuthProvider({ children }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session?.user) {
         identify(session.user.id, {
@@ -73,6 +83,13 @@ export default function AuthProvider({ children }) {
         });
         // Initialize offline adapter for Tauri on auth change
         initOfflineAdapter(session.user.id);
+        const isSameUser = session.user.id === sessionUserIdRef.current;
+        const alreadyHasProfile = hasProfileRef.current;
+        // Avoid UI remount/flicker on passive auth events (tab refocus/token refresh).
+        if (
+          event === 'TOKEN_REFRESHED'
+          || (event === 'SIGNED_IN' && isSameUser && alreadyHasProfile)
+        ) return;
         setProfileLoading(true);
         loadProfile();
       } else {
